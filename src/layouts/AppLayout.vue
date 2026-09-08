@@ -3,19 +3,20 @@ import { computed } from 'vue'
 import { RouterLink, RouterView } from 'vue-router'
 
 import { staticMenus } from '@/config/menu'
+import { useAccessStore } from '@/stores/access'
 
-/**
- * PSEUDOCODE:
- *
- * visibleMenus = staticMenus.filter(menu => {
- *   if menu.permission is empty:
- *       return true
- *   return accessStore.hasPermission(menu.permission)
- * })
- *
- * 当前为了先看静态页面结构，暂时全部显示。
- */
-const visibleMenus = computed(() => staticMenus)
+const accessStore = useAccessStore()
+
+// 菜单结构固定，只按权限过滤；权限尚未加载时只显示公共入口。
+const visibleMenus = computed(() =>
+  staticMenus.filter((menu) => {
+    if (!menu.permission) {
+      return true
+    }
+
+    return accessStore.hasPermission(menu.permission)
+  }),
+)
 </script>
 
 <template>

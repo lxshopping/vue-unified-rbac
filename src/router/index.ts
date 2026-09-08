@@ -10,6 +10,7 @@ import RolePermissionMatrixView from '@/views/rbac/RolePermissionMatrixView.vue'
 import UserRoleView from '@/views/rbac/UserRoleView.vue'
 import MyPermissionView from '@/views/rbac/MyPermissionView.vue'
 import { PERMISSIONS } from '@/config/permission-codes'
+import { useAccessStore } from '@/stores/access'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -54,26 +55,32 @@ const router = createRouter({
   ],
 })
 
-/**
- * PSEUDOCODE - 下一阶段再打开路由权限守卫：
- *
- * router.beforeEach(async (to) => {
- *   access = useAccessStore()
- *
- *   if not access.loaded:
- *       await access.loadMyAccess()
- *
- *   required = to.meta.permission
- *   if required is empty:
- *       allow
- *
- *   if access.hasPermission(required):
- *       allow
- *
- *   return /403
- * })
- *
- * 注意：这里仍然只是 UI 导航限制，真正安全边界在 DRF RBACPermission。
- */
+router.beforeEach(async (to) => {
+  // 错误页不请求权限，避免失败后再次拦截或循环跳转。
+  if (to.path === '/403') {
+    return true
+  }
+
+  const accessStore = useAccessStore()
+
+  if (!accessStore.loaded) {
+    try {
+      await accessStore.loadMyAccess()
+    } catch {
+      // Store 已清空权限并记录错误，继续按 default deny 判断页面。
+    }
+  }
+
+  const required = to.meta.permission
+  if (!required) {
+    return true
+  }
+
+  if (accessStore.hasPermission(required)) {
+    return true
+  }
+
+  return '/403'
+})
 
 export default router

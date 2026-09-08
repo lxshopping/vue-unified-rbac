@@ -1,18 +1,40 @@
 import type { RbacMe } from '@/types/rbac'
 
-/**
- * PSEUDOCODE ONLY
- *
- * fetchMyAccess():
- *   1. 从现有 auth 模块取得 Keycloak access token
- *   2. GET /api/rbac/me
- *   3. Header: Authorization: Bearer <token>
- *   4. HTTP 200 -> 返回 username/authSource/roles/permissions
- *   5. HTTP 401 -> 交给 auth 模块重新登录
- *   6. 其他错误 -> 抛出错误，不要默认授予权限
- *
- * 当前故意不实现 HTTP Client，下一阶段由你/Codex 完成。
- */
+// 学习阶段临时从 sessionStorage 取 Token，接入登录后只需替换这里。
+function getAccessToken(): string | null {
+  return sessionStorage.getItem('access_token')
+}
+
 export async function fetchMyAccess(): Promise<RbacMe> {
-  throw new Error('TODO: implement GET /api/rbac/me')
+  const token = getAccessToken()
+  const response = await fetch('/api/rbac/me', {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+
+  if (!response.ok) {
+    throw new Error(`加载权限失败（HTTP ${response.status}）`)
+  }
+
+  const data = await response.json()
+
+  // TypeScript 类型不能校验网络数据；结构异常时拒绝整份响应，避免误授予权限。
+  if (
+    !data ||
+    typeof data !== 'object' ||
+    typeof data.username !== 'string' ||
+    (data.auth_source !== 'local' && data.auth_source !== 'sso') ||
+    !Array.isArray(data.roles) ||
+    !data.roles.every((role: unknown) => typeof role === 'string') ||
+    !Array.isArray(data.permissions) ||
+    !data.permissions.every((code: unknown) => typeof code === 'string')
+  ) {
+    throw new Error('加载权限失败：/api/rbac/me 响应格式异常')
+  }
+
+  return {
+    username: data.username,
+    authSource: data.auth_source,
+    roles: data.roles,
+    permissions: data.permissions,
+  }
 }
