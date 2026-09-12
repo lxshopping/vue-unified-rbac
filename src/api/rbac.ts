@@ -1,21 +1,9 @@
+import request from '@/api/request'
 import type { RbacMe } from '@/types/rbac'
 
-// 学习阶段临时从 sessionStorage 取 Token，接入登录后只需替换这里。
-function getAccessToken(): string | null {
-  return sessionStorage.getItem('access_token')
-}
-
 export async function fetchMyAccess(): Promise<RbacMe> {
-  const token = getAccessToken()
-  const response = await fetch('/api/rbac/me', {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  })
-
-  if (!response.ok) {
-    throw new Error(`加载权限失败（HTTP ${response.status}）`)
-  }
-
-  const data = await response.json()
+  const response = await request.get('/rbac/me')
+  const data = response.data
 
   // TypeScript 类型不能校验网络数据；结构异常时拒绝整份响应，避免误授予权限。
   if (

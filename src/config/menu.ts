@@ -2,8 +2,9 @@ import { PERMISSIONS } from './permission-codes'
 
 export interface StaticMenuItem {
   title: string
-  path: string
+  path?: string
   permission?: string
+  children?: StaticMenuItem[]
 }
 
 /**
@@ -12,14 +13,7 @@ export interface StaticMenuItem {
  */
 export const staticMenus: StaticMenuItem[] = [
   { title: '首页', path: '/' },
-  { title: '发布单', path: '/release/orders', permission: PERMISSIONS.RELEASE_ORDER_VIEW },
-  { title: '角色管理', path: '/rbac/roles', permission: PERMISSIONS.RBAC_ROLE_VIEW },
-  { title: '权限管理', path: '/rbac/permissions', permission: PERMISSIONS.RBAC_PERMISSION_VIEW },
-  {
-    title: '角色权限矩阵',
-    path: '/rbac/role-permissions',
-    permission: PERMISSIONS.RBAC_ROLE_PERMISSION_VIEW,
-  },
-  { title: '用户角色', path: '/rbac/user-roles', permission: PERMISSIONS.RBAC_USER_ROLE_VIEW },
+  { title: '订单 Demo', path: '/release/orders', permission: PERMISSIONS.DEMO_ORDER_VIEW },
+  // RBAC 管理菜单待第二阶段接口就绪后恢复。
   { title: '我的权限', path: '/rbac/me' },
 ]
