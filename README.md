@@ -11,6 +11,7 @@ Vue 3 RBAC 前端学习/复用骨架。
 - AccessStore 加载权限与 default deny
 - 菜单、路由和发布单按钮权限判断
 - Permission Code 命名规则
+- Keycloak SSO 登录、内存 Token、请求前刷新与 SSO Logout
 
 **没有实现完整 RBAC。** 这是为了按“先理解伪代码 → 自己补核心 → Codex 实现 → 修改 → 重写 → Review”的方式学习。
 
@@ -51,16 +52,13 @@ npm install
 npm run dev
 ```
 
-普通页面首次导航会请求同源 `GET /api/rbac/me`。运行环境需将 `/api` 转发到真实后端；当前未配置后端地址或 Vite 代理。如果只启动前端，接口不可用时会拒绝所有受保护权限，公共页面仍可访问，“我的权限”会显示加载失败。
+打开 `http://127.0.0.1:8080` 后自动进入 Keycloak 登录。`.env.development` 已配置 SSO 地址、realm `ops`、client `rbac-demo`；Vite 将 `/api` 代理到 `http://127.0.0.1:8000`。需要本机能够访问 SSO 并信任其 HTTPS 证书，且 DRF 已启动。
 
-学习阶段，在浏览器开发者工具 Console 中设置自己的有效 access token 后刷新：
+登录成功后先初始化 Pinia、加载一次 `GET /api/rbac/me`，再创建 Router 并挂载 Vue。权限仅存于 AccessStore；静态菜单、路由和指令继续使用 `hasPermission()`。
 
-```js
-sessionStorage.setItem('access_token', '替换为自己的有效 Token')
-location.reload()
-```
+Token 由 `src/auth/keycloak.ts` 中的 `keycloak-js` 实例在内存中管理。Axios 在每次请求前调用 `updateToken(30)`，再从 `keycloak.token` 设置 Bearer 头，无需手工输入 Token。401 最多自动重登一次，随后显示可手动重试的认证错误；403 不触发登录。
 
-`src/api/rbac.ts` 的 `getAccessToken()` 是唯一 Token 来源入口，后续接入登录时替换此函数即可。未设置 Token 时不发送 Authorization 头；前端不会解析 Token 或根据角色补权限。更换 Token 或后端权限后刷新页面以重新加载。
+完整配置、9 项人工验收和异常回归方法见 [SSO V1 测试文档](docs/06-sso-test.md)。生产构建需要在 `.env.production.local` 或构建环境提供同样的 `VITE_*` 配置，并由部署服务器转发 `/api`。
 
 发布单按钮只演示按权限显示，暂时保持禁用，不调用业务接口。真正的业务权限仍由后端校验。
 

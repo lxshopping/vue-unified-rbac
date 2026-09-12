@@ -1,12 +1,7 @@
 <template>
   <section>
     <h2>RBAC 前端 V1</h2>
-    <p>当前阶段：静态菜单 + 页面空壳 + 权限伪代码。</p>
-    <ol>
-      <li>先实现 /api/rbac/me。</li>
-      <li>再实现 accessStore.hasPermission()。</li>
-      <li>再实现按钮隐藏。</li>
-      <li>最后实现 route.meta.permission 路由守卫。</li>
-    </ol>
+    <p>已通过 Keycloak SSO 登录，菜单、页面与按钮按后端返回的权限显示。</p>
+    <p>可以打开“我的权限”查看当前角色与权限，或进入有权访问的订单 Demo。</p>
   </section>
 </template>

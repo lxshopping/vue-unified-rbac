@@ -7,6 +7,7 @@ import ReleaseOrderView from '@/views/release/ReleaseOrderView.vue'
 import MyPermissionView from '@/views/rbac/MyPermissionView.vue'
 import { PERMISSIONS } from '@/config/permission-codes'
 import { useAccessStore } from '@/stores/access'
+import { authenticationError, isAuthenticated, recoverAuthentication } from '@/auth/keycloak'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -30,9 +31,18 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
-  // 错误页不请求权限，避免失败后再次拦截或循环跳转。
-  if (to.path === '/403') {
+  // 所有未声明 permission 的页面都跳过 RBAC guard，包括首页与 /403。
+  if (!('permission' in to.meta)) {
     return true
+  }
+
+  if (!isAuthenticated() || authenticationError.value) {
+    try {
+      await recoverAuthentication()
+    } catch {
+      // 自动重登被阻止时，回公共首页显示认证错误，不能误报 /403。
+    }
+    return { path: '/', replace: true }
   }
 
   const accessStore = useAccessStore()
@@ -41,16 +51,16 @@ router.beforeEach(async (to) => {
     try {
       await accessStore.loadMyAccess()
     } catch {
-      // Store 已清空权限并记录错误，继续按 default deny 判断页面。
+      return { path: '/', replace: true }
     }
   }
 
-  const required = to.meta.permission
-  // 未声明权限才是公共路由；空字符串等非法配置仍交给核心默认拒绝。
-  if (!('permission' in to.meta)) {
-    return true
+  // 只有权限成功加载之后，才把缺少权限认定为 403。
+  if (authenticationError.value || accessStore.error || !accessStore.me) {
+    return { path: '/', replace: true }
   }
 
+  const required = to.meta.permission
   if (accessStore.hasPermission(required ?? '')) {
     return true
   }
