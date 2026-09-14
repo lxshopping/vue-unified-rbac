@@ -22,7 +22,10 @@
     "baseUrl": ".",
     "paths": {
       "@/*": [
-        "src/*"
+        "src/demo/*"
+      ],
+      "@scotec/vue-unified-rbac": [
+        "src/lib/index.ts"
       ]
     }
   },
@@ -31,6 +34,9 @@
     "src/**/*.d.ts",
     "src/**/*.tsx",
     "src/**/*.vue",
-    "vite.config.ts"
+    "vite.config.ts",
+    "tests/browser/**/*.ts",
+    "tests/browser/**/*.vue",
+    "tests/types/**/*.ts"
   ]
 }

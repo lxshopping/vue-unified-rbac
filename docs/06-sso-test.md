@@ -1,4 +1,4 @@
-# RBAC V1 SSO 测试
+# Demo Consumer Example：SSO 测试
 
 ## 环境准备
 
@@ -25,7 +25,7 @@
 
 `VITE_KEYCLOAK_URL` 不含 `/realms/ops`。配置依据：[Keycloak 官方 JavaScript adapter 文档](https://www.keycloak.org/securing-apps/javascript-adapter)。
 
-`npm run build` 使用 production 模式，不读取 `.env.development`。部署前在 `.env.production.local` 或构建环境设置以上四个变量（按目标环境调整），部署服务器需支持 SPA history fallback 和 `/api` 反向代理；Vite 开发代理不会打包到生产产物。缺少 Keycloak 配置时应用显示启动错误与重新加载入口。
+`npm run build` 只构建 Library；Demo 用 `npm run build:demo`，使用 demo 模式，不读取 `.env.development`。部署前在 `.env.demo.local` 或构建环境设置以上四个变量（按目标环境调整），部署服务器需支持 SPA history fallback 和 `/api` 反向代理；Vite 开发代理不会打包到生产产物。缺少 Keycloak 配置时应用显示启动错误与重新加载入口。
 
 ## 测试 1：首次访问
 
@@ -91,11 +91,11 @@ demo.order.delete
 
 ## 测试 8：Token Refresh
 
-在测试环境缩短 Access Token Lifespan，或等待当前 Token 剩余不足 30 秒。在 DevTools Sources 中给 `src/auth/keycloak.ts` 的 `keycloak.updateToken(30)` 加断点，然后通过“我的权限”页触发：
+在测试环境缩短 Access Token Lifespan，或等待当前 Token 剩余不足 30 秒。在 DevTools Sources 中给 `src/lib/auth/keycloak-provider.ts` 的 `this.getClient().updateToken(minValidity)` 加断点，然后通过“我的权限”页触发：
 
 ```js
 // 仅开发环境用于触发已有 Store 的显式重载，不读取或注入 Token。
-const { useAccessStore } = await import('/src/stores/access.ts')
+const { useAccessStore } = await import('/src/lib/index.ts')
 await useAccessStore().loadMyAccess()
 ```
 
@@ -133,10 +133,15 @@ git diff --check
 
 `npm run test:sso` 使用 Node 内置测试工具和现有 TypeScript 依赖，无新增认证或测试框架。测试替换 Keycloak 与网络响应，执行真实认证模块、Axios、AccessStore 和 Router；Node 的 VM Modules 实验性提示仅来自测试运行器，不影响应用运行。
 
-## 本次验证记录（2026-09-12）
+## 改造前的历史验证记录（2026-09-12，保留原记录）
 
 - 使用 Node.js 24.19.0 完成 `npm install`、`npm run type-check`、`npm run build`，均通过；`npm install` 审计报告 0 vulnerabilities。
 - `npm run test:sso`：14 项通过，覆盖初始化、刷新顺序、并发 401、跨回跳防循环、存储受限、403 区分、权限缓存、无 view 拒绝、错误重试与 Logout。
 - 临时 Edge 浏览器检查（替换 SDK / 后端）：admin、viewer、无 view、持续 401、me 403 重试、初始化失败，共 6 组通过；包含实际菜单 / 按钮 DOM、路由、F5 和 Logout 入口。
 - 真实 SSO 首次访问：已发起到 `ops` 登录端点的跳转。这台机器的新浏览器上下文报 `ERR_CERT_AUTHORITY_INVALID`；仅在临时诊断上下文忽略证书错误后，确认真实 `Sign in to ops` 页面和登录表单可访问，参数为 `client_id=rbac-demo`、`response_type=code`、`code_challenge_method=S256`。应用未关闭证书校验，正常联调前须信任内网 CA。
 - 未使用真实测试账号完成登录，因此真实 DRF `/api/rbac/me` 的 200、账号权限、Token 刷新及服务端 Logout 仍需按上述 9 项人工验收。
+
+
+## Library 改造后的验证
+
+最新构建、测试、安装包及真实 SSO 环境限制见 [Library 改造记录](07-library-refactor.md)。不要将上方历史结果视作本次的真实账号验收。

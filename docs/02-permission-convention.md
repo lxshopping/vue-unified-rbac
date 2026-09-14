@@ -1,5 +1,8 @@
 # Permission Code 命名规则
 
+> 历史 Demo / Consumer Example 文档：其中的业务权限码、接口和页面属于宿主示例，不是 Library 内置功能或本次开发范围。当前公共 API 与目录以 [README](../README.md) 和 [Library 改造记录](07-library-refactor.md) 为准。
+
+
 统一使用：
 
 ```text

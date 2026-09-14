@@ -1,6 +1,5 @@
 {
-  "name": "vue-unified-rbac",
-  "private": true,
+  "name": "@scotec/vue-unified-rbac",
   "version": "0.1.0",
   "type": "module",
   "engines": {
@@ -8,23 +7,51 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc --noEmit && vite build",
-    "preview": "vite preview",
+    "build": "npm run type-check && npm run build:lib",
+    "build:lib": "vite build && tsc -p tsconfig.lib.json",
+    "build:demo": "vue-tsc --noEmit && vite build --mode demo",
+    "preview": "vite preview --mode demo",
     "type-check": "vue-tsc --noEmit",
-    "test:sso": "node --experimental-vm-modules --test tests/sso.test.mjs"
+    "test": "node --experimental-vm-modules --test tests/*.test.mjs",
+    "test:sso": "node --experimental-vm-modules --test tests/sso.test.mjs",
+    "prepack": "npm run build"
   },
   "dependencies": {
-    "axios": "^1.20.0",
-    "keycloak-js": "^26.2.4",
-    "pinia": "^3.0.0",
-    "vue": "^3.5.0",
-    "vue-router": "^4.5.0"
+    "keycloak-js": "^26.2.4"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@vitejs/plugin-vue": "^6.0.0",
     "typescript": "~5.8.0",
     "vite": "^7.0.0",
-    "vue-tsc": "^3.0.0"
+    "vue-tsc": "^3.0.0",
+    "vue": "^3.5.0",
+    "pinia": "^3.0.0",
+    "vue-router": "^4.5.0",
+    "axios": "^1.20.0"
+  },
+  "description": "Vue RBAC plugin with pluggable authentication, permission store, router guard and directive",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.0",
+    "pinia": "^3.0.0",
+    "vue-router": "^4.5.0",
+    "axios": "^1.20.0"
   }
 }

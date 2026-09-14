@@ -1,15 +1,18 @@
 # 实现顺序（按“先测试 → 拆解 → 复述 → 修改 → 重写 → Review”）
 
+> 历史 Demo / Consumer Example 文档：其中的业务权限码、接口和页面属于宿主示例，不是 Library 内置功能或本次开发范围。当前公共 API 与目录以 [README](../README.md) 和 [Library 改造记录](07-library-refactor.md) 为准。
+
+
 ## Step 1 — 只看伪代码
 
 重点读：
 
-1. `src/types/rbac.ts`
-2. `src/api/rbac.ts`
-3. `src/stores/access.ts`
-4. `src/config/menu.ts`
-5. `src/router/index.ts`
-6. `src/views/release/ReleaseOrderView.vue`
+1. `src/demo/types/rbac.ts`
+2. `src/demo/api/rbac.ts`
+3. `src/lib/access/store.ts`
+4. `src/demo/config/menu.ts`
+5. `src/demo/router/index.ts`
+6. `src/demo/views/release/ReleaseOrderView.vue`
 
 自己复述：
 

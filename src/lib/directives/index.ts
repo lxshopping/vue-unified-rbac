@@ -1,0 +1,1 @@
+export { createPermissionDirective } from './permission'
