@@ -10,3 +10,7 @@ export { installRbacGuard } from './router'
 export type { RouterGuardOptions } from './router'
 export { filterMenus } from './menu'
 export type { PermissionMenuItem } from './menu'
+
+export { HybridAuthManager, createHybridAuthManager } from './auth'
+export type { HybridAuthOptions, AuthMode, AuthSource } from './auth'
+export * from './admin'

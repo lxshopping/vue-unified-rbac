@@ -123,6 +123,7 @@ function defineAccessStore({ auth, loadAccess }: AccessStoreOptions) {
       loading,
       error,
       loadMyAccess,
+      loadAccess: loadMyAccess,
       reloadAccess,
       hasPermission,
       hasAnyPermission,

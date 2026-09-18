@@ -1,4 +1,5 @@
 import { inject } from 'vue'
+import { HybridAuthManager } from './auth/hybrid-manager'
 import type { App, InjectionKey } from 'vue'
 import { initializeAccessStore } from './access/store'
 import { createPermissionDirective } from './directives/permission'
@@ -7,13 +8,20 @@ import type { RbacContext, RbacPlugin, RbacPluginOptions } from './types'
 const rbacKey: InjectionKey<RbacContext> = Symbol('scotec:rbac')
 
 export function createRbacPlugin(options: RbacPluginOptions): RbacPlugin {
-  const accessStore = initializeAccessStore(options.pinia, options)
+  if (options.auth instanceof HybridAuthManager && options.mode && options.auth.mode !== options.mode) {
+    throw new Error('Plugin mode must match auth manager mode')
+  }
+  const auth = options.auth instanceof HybridAuthManager ? options.auth : new HybridAuthManager({
+    ...options.hybrid, mode: options.mode ?? 'sso', sso: options.auth,
+  })
+  const accessStore = initializeAccessStore(options.pinia, { auth, loadAccess: options.loadAccess })
+  auth.onSessionChange(() => accessStore.clearAccess())
   const context: RbacContext = {
-    auth: options.auth,
+    auth,
     accessStore,
     async logout() {
       accessStore.clearAccess()
-      await options.auth.logout()
+      await auth.logout()
     },
   }
   return {

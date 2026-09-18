@@ -37,3 +37,9 @@ GET    /api/rbac/users/{user}/roles
 Local 模式可以再提供 UserRole 修改 API；SSO 模式 User -> Role 只读，不提供修改能力。
 
 不要为了先做页面而急着一次性实现所有管理 API。第一阶段只用 `/api/rbac/me` 跑通发布单按钮即可。
+
+## V2 / 0.2.0 契约边界
+
+上述管理 URL 仍是历史建议，不代表服务端已经实现。0.2.0 的可选 Admin client 要求宿主显式传入 roles、permissions、rolePermissions 端点；只有 me 默认 `/api/rbac/me`。updateRolePermissions 端点缺省时只读，管理权限码也必须显式配置。
+
+归一化数据结构、响应适配、分页/更新约束和接入示例见 [README 的 Admin 章节](../README.md#optional-rbac-admin-ui)，待确认事项与测试边界见 [V2 交付记录](08-v2-upgrade.md)。本次未进行真实 Admin 后端联调。

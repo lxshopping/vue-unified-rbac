@@ -23,7 +23,11 @@ export class KeycloakAuthProvider implements AuthProvider {
     return (this.initialization ??= this.initialize())
   }
 
-  private async initialize(): Promise<void> {
+  initPassive(): Promise<void> {
+    return (this.initialization ??= this.initialize(true))
+  }
+
+  private async initialize(passive = false): Promise<void> {
     const { url, realm, clientId, initOptions } = this.options
     if (!url || !realm || !clientId) {
       throw new AuthenticationError('缺少 Keycloak 配置：url / realm / clientId。')
@@ -37,6 +41,8 @@ export class KeycloakAuthProvider implements AuthProvider {
       flow: 'standard',
       pkceMethod: 'S256',
     }
+    // Process OIDC callbacks, but never start an automatic login/check-sso redirect.
+    if (passive) delete options.onLoad
     const authenticated = await this.keycloak.init(options)
     // Runtime recovery belongs to the host. Prevent SDK clearToken() from
     // silently starting a second login and bypassing the host's retry policy.
