@@ -3,6 +3,7 @@ import type { Pinia } from 'pinia'
 import { computed, ref } from 'vue'
 
 import { AuthenticationError } from '../auth/types'
+import { HybridAuthManager } from '../auth/hybrid-manager'
 import type { AuthProvider } from '../auth/types'
 import { normalizeAccess } from './types'
 import type { AccessLoader, AccessResult } from './types'
@@ -47,9 +48,17 @@ function defineAccessStore({ auth, loadAccess }: AccessStoreOptions) {
             return null
           }
           if (!auth.isAuthenticated()) throw new AuthenticationError('登录状态已失效。')
+          if (auth instanceof HybridAuthManager) auth.reconcileAuthSource(data.auth_source ?? data.authSource)
+          if (version !== loadVersion) return null
+          if (!auth.isAuthenticated()) throw new AuthenticationError('登录状态已失效。')
           me.value = data
           return data
         } catch (cause) {
+          if (version === loadVersion && auth instanceof HybridAuthManager &&
+              ((cause as { response?: { status?: number } })?.response?.status === 401 ||
+                (cause instanceof AuthenticationError && auth.source !== null))) {
+            await auth.handleAuthError(cause)
+          }
           if (version === loadVersion) {
             // 失败时清空权限，不能继续使用之前加载成功的权限。
             me.value = null

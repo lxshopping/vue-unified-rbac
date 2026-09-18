@@ -50,4 +50,8 @@ async function bootstrap() {
   }
 }
 
-void bootstrap()
+if (import.meta.env.VITE_RBAC_V3 === 'true') {
+  void import('./v3/bootstrap').then(({ bootstrapV3 }) => bootstrapV3())
+} else {
+  void bootstrap()
+}

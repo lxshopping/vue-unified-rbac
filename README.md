@@ -1,3 +1,18 @@
+> **V3 / 0.3.0**：新增默认 Django Session Local Provider 和可选 Host Local Adapter，保留 V2 SSO、Hybrid 和 Admin。四种接入场景、CSRF 配置、可运行 Demo 及兼容说明见 [V2 → V3 Migration](docs/09-v3-migration.md)。
+>
+> Authentication source may differ. Authorization source does not.
+> Frontend authorization always comes from: GET /api/rbac/me.
+
+```ts
+const rbac = createRbacPlugin({
+  auth: { mode: 'local', localProvider: createDjangoLocalProvider() },
+})
+app.use(rbac)
+await rbac.auth.loginLocal({ username, password }) // automatically loads /me
+```
+
+已有宿主继续 `hostLogin() → setAuthSource('local') → loadAccess()`，无需替换登录系统。下文 V2 接口继续有效，V3 扩展以迁移指南为准。
+
 # @scotec/vue-unified-rbac
 
 Vue 3 通用 RBAC Plugin / Library。认证通过 AuthProvider 接入，权限由宿主的 loadAccess 返回。角色仅展示，授权只匹配 permissions，不存在 admin 特权或内置业务 Permission Code。

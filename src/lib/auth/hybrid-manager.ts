@@ -1,10 +1,12 @@
 import { shallowRef } from 'vue'
 import { AuthenticationError } from './types'
 import type { AuthMode, AuthProvider, AuthSource } from './types'
+import type { LocalAuthProvider } from './local-provider'
 
 export interface HybridAuthOptions {
   mode: AuthMode
   sso?: AuthProvider
+  localProvider?: LocalAuthProvider<unknown>
   storage?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null
   storageKey?: string
   localLogout?: () => void | Promise<void>
@@ -19,6 +21,9 @@ export class HybridAuthManager implements AuthProvider {
   private readonly listeners = new Set<() => void>()
   private revision = 0
   private loginPending?: Promise<void>
+  private localPending = false
+  private readonly failure = shallowRef<string | null>(null)
+  private accessLoader?: () => Promise<unknown>
   private readonly key: string
   constructor(private readonly options: HybridAuthOptions) {
     if (!['local', 'sso', 'hybrid'].includes(options.mode)) throw new Error('Invalid auth mode')
@@ -27,6 +32,10 @@ export class HybridAuthManager implements AuthProvider {
     this.restoreAuthSource()
   }
   get mode(): AuthMode { return this.options.mode }
+  get error(): string | null { return this.failure.value }
+  /** Plugin wiring: authentication completion refreshes the single AccessStore. */
+  bindAccessLoader(loader: () => Promise<unknown>): void { this.accessLoader = loader }
+  getLocalRequestConfig() { return this.isLocal() ? this.options.localProvider?.getRequestConfig?.() : undefined }
   get source(): AuthSource | null { return this.current.value }
   getMode(): AuthMode { return this.mode }
   getAuthSource(): AuthSource | null { return this.source }
@@ -46,13 +55,49 @@ export class HybridAuthManager implements AuthProvider {
     this.revision++
     for (const callback of this.listeners) callback()
   }
-  setAuthSource(source: AuthSource): void {
+  setAuthSource(source: Exclude<AuthSource, null>): void {
     if (!['local', 'sso'].includes(source) || (this.mode !== 'hybrid' && source !== this.mode)) {
       throw new AuthenticationError('认证来源与系统模式不匹配。')
     }
     try { this.storage()?.setItem(this.key, source) } catch { /* In-memory login remains usable. */ }
     // Same-source login may belong to another user: invalidate old access too.
+    this.failure.value = null
     this.change(source)
+  }
+  /** Only called after a validated /me response; server source supersedes cached selection. */
+  reconcileAuthSource(source: string | undefined): void {
+    if ((source !== 'local' && source !== 'sso') || source === this.source) return
+    try { this.storage()?.setItem(this.key, source) } catch { /* Memory remains authoritative. */ }
+    // The store is already loading with permissions revoked. Do not cancel that load.
+    this.current.value = source
+    this.revision++
+  }
+  async notifyLocalAuthenticated(): Promise<void> {
+    this.setAuthSource('local')
+    await this.accessLoader?.()
+  }
+  async loginLocal<Credentials>(credentials: Credentials): Promise<void> {
+    if (this.mode === 'sso' || !this.options.localProvider) {
+      throw new AuthenticationError('Local provider is not configured for this mode.')
+    }
+    if (this.localPending) throw new AuthenticationError('Local login is already in progress.')
+    this.localPending = true
+    this.clearAuthSource()
+    this.failure.value = null
+    let revision = this.revision
+    try {
+      await this.options.localProvider.login(credentials)
+      if (revision !== this.revision) throw new AuthenticationError('认证会话已切换。')
+      this.setAuthSource('local')
+      revision = this.revision
+      await this.accessLoader?.()
+    } catch (error) {
+      if (revision === this.revision) {
+        this.clearAuthSource()
+        this.failure.value = 'Local authentication failed.'
+      }
+      throw error
+    } finally { this.localPending = false }
   }
   markLocalAuthenticated(): void { this.setAuthSource('local') }
   clearAuthSource(): void {
@@ -67,6 +112,7 @@ export class HybridAuthManager implements AuthProvider {
     return this.source
   }
   async init(): Promise<void> {
+    if (this.isLocal()) await this.options.localProvider?.initCsrf?.()
     if (!this.isSso()) return
     if (this.mode === 'hybrid') {
       if (!this.options.sso?.initPassive) throw new AuthenticationError('Hybrid SSO provider must implement initPassive().')
@@ -75,7 +121,7 @@ export class HybridAuthManager implements AuthProvider {
   }
   isAuthenticated(): boolean {
     if (this.isLocal()) return this.options.isLocalAuthenticated?.() ?? true
-    return this.isSso() && this.options.sso!.isAuthenticated()
+    return this.isSso() && (this.options.sso?.isAuthenticated() ?? false)
   }
   loginSso(): Promise<void> {
     if (this.mode === 'local') return Promise.reject(new AuthenticationError('Local 模式不支持 SSO。'))
@@ -94,13 +140,14 @@ export class HybridAuthManager implements AuthProvider {
     return this.loginPending
   }
   login(): Promise<void> { return this.loginSso() }
-  getAccessToken(): string | undefined { return this.isSso() ? this.options.sso!.getAccessToken() : undefined }
+  getAccessToken(): string | undefined { return this.isSso() ? this.options.sso?.getAccessToken() : undefined }
   async refreshToken(minValidity?: number): Promise<boolean> {
     return this.isSso() ? this.options.sso!.refreshToken(minValidity) : false
   }
   clearToken(): void { if (this.isSso()) this.options.sso?.clearToken?.() }
   async handleAuthError(error: unknown): Promise<void> {
     const source = this.source
+    this.failure.value = error instanceof Error ? error.message : 'Authentication failed.'
     try { if (source === 'sso') this.clearToken() } finally { this.clearAuthSource() }
     if (source === 'local') await this.options.onLocalAuthError?.(error)
     else if (source === 'sso') await this.options.onAuthError?.(error)
@@ -108,7 +155,10 @@ export class HybridAuthManager implements AuthProvider {
   async logout(): Promise<void> {
     const source = this.source
     this.clearAuthSource()
-    if (source === 'local') await this.options.localLogout?.()
+    if (source === 'local') {
+      if (this.options.localProvider) await this.options.localProvider.logout()
+      else await this.options.localLogout?.()
+    }
     else if (source === 'sso') {
       try { await this.options.sso!.logout() } finally { this.options.sso?.clearToken?.() }
     }

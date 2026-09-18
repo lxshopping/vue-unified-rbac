@@ -22,7 +22,7 @@ async function fixture(mode = 'hybrid', extra = {}) {
   const data = new Map()
   const storage = { getItem: key => data.get(key) ?? null, setItem: (key, value) => data.set(key, value), removeItem: key => data.delete(key) }
   const rbac = lib.createRbacPlugin({ pinia: createPinia(), mode, auth: sso,
-    hybrid: { storage, ...extra }, loadAccess: async () => access })
+    hybrid: { storage, ...extra }, loadAccess: async () => ({ ...access, auth_source: rbac.auth.source }) })
   const request = axios.create()
   const configs = []
   request.defaults.adapter = async config => {

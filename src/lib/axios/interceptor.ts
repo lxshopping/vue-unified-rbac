@@ -1,3 +1,4 @@
+import { AxiosHeaders } from 'axios'
 import type { AxiosInstance } from 'axios'
 import { AuthenticationError } from '../auth/types'
 import type { AuthProvider } from '../auth/types'
@@ -19,6 +20,7 @@ export function installAuthInterceptor(
   options: AuthInterceptorOptions = {},
 ): () => void {
   const manager = auth instanceof HybridAuthManager ? auth : undefined
+  const injectedBearers = new Set<string>()
   const sessions = new WeakMap<object, { revision: number; source: string | null }>()
   async function fail(error: unknown, source: string | null) {
     options.accessStore?.clearAccess()
@@ -31,8 +33,20 @@ export function installAuthInterceptor(
     const source = manager ? manager.source : 'sso'
     const revision = manager?.getRevision() ?? 0
     sessions.set(config, { source, revision })
-    // Host cookies, sessions and existing Authorization headers remain untouched.
-    if (source !== 'sso') return config
+    if (source !== 'sso') {
+      // Remove only our own previously injected credential (e.g. a retried config).
+      if (injectedBearers.has(String(config.headers.get('Authorization')))) config.headers.delete('Authorization')
+      const local = manager?.getLocalRequestConfig()
+      if (local) {
+        config.baseURL ??= local.baseURL
+        config.withCredentials = local.withCredentials
+        config.xsrfCookieName = local.xsrfCookieName
+        config.xsrfHeaderName = local.xsrfHeaderName
+        config.withXSRFToken = local.withXSRFToken
+        config.headers = AxiosHeaders.concat(config.headers, local.headers)
+      }
+      return config
+    }
     let token: string | undefined
     try {
       if (!auth.isAuthenticated()) throw new AuthenticationError('登录状态已失效。')
@@ -44,7 +58,9 @@ export function installAuthInterceptor(
       if (!manager || revision === manager.getRevision()) await fail(error, source)
       throw error
     }
-    config.headers.set('Authorization', 'Bearer ' + token)
+    const bearer = 'Bearer ' + token
+    injectedBearers.add(bearer)
+    config.headers.set('Authorization', bearer)
     return config
   })
   // Preserve 0.1.x raw-provider response handling unless explicitly opting in.
@@ -59,6 +75,7 @@ export function installAuthInterceptor(
       throw error
     }) : undefined
   return () => {
+    injectedBearers.clear()
     instance.interceptors.request.eject(id)
     if (responseId !== undefined) instance.interceptors.response.eject(responseId)
   }

@@ -10,7 +10,7 @@ export interface AuthProvider {
   refreshToken(minValidity?: number): Promise<boolean>
 }
 export type AuthMode = 'local' | 'sso' | 'hybrid'
-export type AuthSource = 'local' | 'sso'
+export type AuthSource = 'local' | 'sso' | null
 export class AuthenticationError extends Error {
   constructor(message: string) { super(message); this.name = 'AuthenticationError' }
 }
