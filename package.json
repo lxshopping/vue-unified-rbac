@@ -9,12 +9,13 @@
     "dev": "vite",
     "build": "npm run type-check && npm run build:lib",
     "build:lib": "vite build && tsc -p tsconfig.lib.json",
-    "build:demo": "vue-tsc --noEmit && vite build --mode demo",
+    "build:demo": "npm run build:lib && vue-tsc --noEmit && vite build --mode demo",
     "preview": "vite preview --mode demo",
     "type-check": "vue-tsc --noEmit",
     "test": "node --experimental-vm-modules --test tests/*.test.mjs",
     "test:sso": "node --experimental-vm-modules --test tests/sso.test.mjs",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "predev": "npm run build:lib"
   },
   "dependencies": {
     "keycloak-js": "^26.2.4"
@@ -38,13 +39,16 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    }
+    },
+    "./style.css": "./dist/style.css"
   },
   "files": [
     "dist",
     "README.md"
   ],
-  "sideEffects": false,
+  "sideEffects": [
+    "**/*.css"
+  ],
   "publishConfig": {
     "access": "public"
   },

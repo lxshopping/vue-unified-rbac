@@ -1,0 +1,7 @@
+.rbac-admin-button { box-sizing: border-box; appearance: none; display: inline-flex; align-items: center; justify-content: center; min-height: 36px; margin: 0; padding: 7px 14px; border: 1px solid var(--rbac-admin-border); border-radius: var(--rbac-admin-radius); background: var(--rbac-admin-bg); color: var(--rbac-admin-text); font: inherit; line-height: 1.4; text-decoration: none; cursor: pointer; white-space: nowrap; }
+.rbac-admin-button--secondary { background: var(--rbac-admin-bg); color: var(--rbac-admin-text); }
+.rbac-admin-button--primary { background: var(--rbac-admin-primary); border-color: var(--rbac-admin-primary); color: #fff; }
+.rbac-admin-button--danger { background: var(--rbac-admin-danger); border-color: var(--rbac-admin-danger); color: #fff; }
+.rbac-admin-button:hover:not(:disabled) { filter: brightness(.94); border-color: var(--rbac-admin-primary); }
+.rbac-admin-button:focus-visible { outline: 2px solid var(--rbac-admin-primary); outline-offset: 3px; }
+.rbac-admin-button:disabled { opacity: .5; cursor: not-allowed; }

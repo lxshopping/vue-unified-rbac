@@ -584,3 +584,14 @@ HTTP 默认读取裸数组；写入默认 PUT、body `{ permissions: string[] }`
 发布系统继续保留：Local 表单/API/密码处理/凭据持久化策略/CSRF、登录页布局、业务 API、业务权限码、菜单结构、路由挂载与错误提示。Library 只接管认证来源协调和统一授权。
 
 详细交付清单、调用链及实际验证结果见 [V2 交付记录](docs/08-v2-upgrade.md)。
+
+
+### Admin UI 样式
+
+使用内置 Admin 页面时，在宿主入口显式加载：
+
+```ts
+import '@scotec/vue-unified-rbac/style.css'
+```
+
+库提供隔离的基础样式和可覆盖的 CSS Variables，JS 公共 API 保持不变。完整接入、主题设置与无后端 Demo 见 [Admin UI 文档](docs/11-admin-ui.md)。

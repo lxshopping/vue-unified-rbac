@@ -1,0 +1,26 @@
+.rbac-admin-page {
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+  color: var(--rbac-admin-text);
+  font: 14px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+  display: grid;
+  gap: var(--rbac-admin-spacing-md);
+}
+.rbac-admin-header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--rbac-admin-spacing-md); flex-wrap: wrap; }
+.rbac-admin-title { margin: 0; color: var(--rbac-admin-text); font-size: 24px; font-weight: 650; line-height: 1.4; }
+.rbac-admin-description { margin: var(--rbac-admin-spacing-xs) 0 0; color: var(--rbac-admin-text-secondary); font: inherit; }
+.rbac-admin-toolbar { display: flex; flex-wrap: wrap; gap: var(--rbac-admin-spacing-sm); }
+.rbac-admin-card { min-width: 0; padding: var(--rbac-admin-spacing-lg); border: 1px solid var(--rbac-admin-border); border-radius: var(--rbac-admin-radius); background: var(--rbac-admin-bg); }
+.rbac-admin-section-title { margin: 0 0 var(--rbac-admin-spacing-md); font-size: 16px; font-weight: 600; }
+.rbac-admin-code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+.rbac-admin-tags { display: flex; flex-wrap: wrap; gap: var(--rbac-admin-spacing-sm); margin: 0; padding: 0; list-style: none; }
+.rbac-admin-user-info { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--rbac-admin-spacing-sm) var(--rbac-admin-spacing-lg); margin: 0; }
+.rbac-admin-user-info dt { color: var(--rbac-admin-text-secondary); }
+.rbac-admin-user-info dd { margin: 0; overflow-wrap: anywhere; }
+@media (max-width: 1199px) { .rbac-admin-card { padding: var(--rbac-admin-spacing-md); } }
+@media (max-width: 767px) {
+  .rbac-admin-header { flex-direction: column; }
+  .rbac-admin-title { font-size: 20px; }
+  .rbac-admin-card { padding: var(--rbac-admin-spacing-sm); }
+}

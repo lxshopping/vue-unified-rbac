@@ -1,6 +1,6 @@
 import { computed, defineComponent, h, onScopeDispose, ref, watch } from 'vue'
 import { useRbacAdmin } from '../context'
-import { frame, message, useAdminResource } from './shared'
+import { frame, message, status, useAdminResource } from './shared'
 
 export default defineComponent({
   name: 'RolePermissionMatrixView',
@@ -58,26 +58,31 @@ export default defineComponent({
       return frame('角色权限矩阵', state.allowed.value, state.loading.value,
         state.error.value || saveError.value, state.reload, [
           message(feedback),
-          !editable.value ? h('p', '只读模式') : null,
-          saving.value ? h('p', { role: 'status' }, '正在保存…') : null,
-          data && (!data.roles.length || !data.permissions.length ? h('p', '暂无角色或权限') :
-            h('div', { style: { overflowX: 'auto' } }, [h('table', { class: 'rbac-admin-matrix' }, [
-              h('thead', [h('tr', [h('th', { scope: 'col' }, '角色'),
-                ...data.permissions.map(p => h('th', { scope: 'col', key: p.code }, p.code)),
-                h('th', { scope: 'col' }, '操作')])]),
-              h('tbody', data.roles.map((role, index) => h('tr', { key: role.code }, [
-                h('th', { scope: 'row' }, role.name ?? role.code),
-                ...data.permissions.map(p => h('td', { key: p.code }, [h('input', {
-                  type: 'checkbox', 'aria-label': role.code + ': ' + p.code,
-                  checked: draft.value[index]?.includes(p.code) ?? false,
-                  disabled: !editable.value || saving.value,
-                  onChange: (event: Event) => toggle(index, p.code, (event.target as HTMLInputElement).checked),
-                })])),
-                h('td', [h('button', { type: 'button', disabled: !editable.value || saving.value,
-                  onClick: () => save(index) }, '保存 ' + role.code)]),
+          !editable.value ? h('p', { class: 'rbac-admin-description' }, '只读模式') : null,
+          saving.value ? status('正在保存…') : null,
+          data && (!data.roles.length || !data.permissions.length ? status('暂无角色或权限', 'empty') :
+            h('div', { class: 'rbac-admin-table-wrapper rbac-admin-table-wrapper--matrix', tabindex: 0, role: 'region', 'aria-label': '角色权限矩阵' }, [h('table', { class: 'rbac-admin-table rbac-admin-matrix' }, [
+              h('thead', [h('tr', [h('th', { scope: 'col' }, '权限 Code'),
+                ...data.roles.map(role => h('th', { scope: 'col', key: role.code, class: 'rbac-admin-code' }, role.code))])]),
+              h('tbody', data.permissions.map(p => h('tr', { key: p.code }, [
+                h('th', { scope: 'row', class: 'rbac-admin-code' }, p.code),
+                ...data.roles.map((role, index) => {
+                  const granted = draft.value[index]?.includes(p.code) ?? false
+                  return h('td', { key: role.code }, [editable.value ? h('input', {
+                    class: 'rbac-admin-checkbox', type: 'checkbox', 'aria-label': role.code + ': ' + p.code,
+                    checked: granted, disabled: saving.value,
+                    onChange: (event: Event) => toggle(index, p.code, (event.target as HTMLInputElement).checked),
+                  }) : h('span', { class: granted ? 'rbac-admin-permission-enabled' : 'rbac-admin-permission-disabled', role: 'img', 'aria-label': granted ? '有权限' : '无权限' }, granted ? '✓' : '—')])
+                }),
               ]))),
+              editable.value ? h('tfoot', [h('tr', [h('th', { scope: 'row' }, '操作'),
+                ...data.roles.map((role, index) => h('td', { key: role.code }, [h('button', {
+                  class: 'rbac-admin-button rbac-admin-button--primary', type: 'button', disabled: saving.value,
+                  onClick: () => save(index),
+                }, '保存 ' + role.code)])),
+              ])]) : null,
             ])])),
-        ], saving.value)
+        ], saving.value, '查看不同角色当前拥有的权限。')
     }
   },
 })

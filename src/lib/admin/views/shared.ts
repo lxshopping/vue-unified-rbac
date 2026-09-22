@@ -30,17 +30,20 @@ export function useAdminResource<T>(loader: () => Promise<T>) {
   return { rbac, admin, allowed, data, loading, error, reload }
 }
 export function frame(title: string, allowed: boolean, loading: boolean, error: string,
-  reload: () => Promise<void>, content: VNodeChild, busy = false) {
-  return h('section', { class: 'rbac-admin', 'aria-busy': loading || busy }, [
-    h('h2', title),
-    !allowed ? h('p', { role: 'alert' }, '权限不足') : [
-      h('button', { type: 'button', disabled: loading || busy, onClick: reload }, '重新加载'),
-      loading ? h('p', { role: 'status' }, '正在加载…') : null,
-      error ? h('p', { role: 'alert' }, error) : null,
+  reload: () => Promise<void>, content: VNodeChild, busy = false, description = '') {
+  return h('section', { class: 'rbac-admin-page', 'aria-busy': loading || busy }, [
+    h('div', { class: 'rbac-admin-header' }, [h('div', [h('h2', { class: 'rbac-admin-title' }, title), h('p', { class: 'rbac-admin-description' }, description)]), allowed ? h('div', { class: 'rbac-admin-toolbar' }, [h('button', { class: 'rbac-admin-button rbac-admin-button--secondary', type: 'button', disabled: loading || busy, onClick: reload }, '重新加载')]) : null]),
+    h('div', { class: 'rbac-admin-card' }, !allowed ? [status('权限不足', 'error')] : [
+      loading ? status('正在加载…') : null,
+      error ? status(error, 'error') : null,
       content,
-    ],
+    ]),
   ])
 }
 export function message(text: Ref<string>) {
-  return text.value ? h('p', { role: 'status' }, text.value) : null
+  return text.value ? status(text.value, 'success') : null
+}
+
+export function status(text: string, kind = 'loading') {
+  return h('div', { class: kind === 'error' ? 'rbac-admin-alert rbac-admin-alert--error' : kind === 'empty' ? 'rbac-admin-empty' : 'rbac-admin-state rbac-admin-state--' + kind, role: kind === 'error' ? 'alert' : 'status' }, text)
 }

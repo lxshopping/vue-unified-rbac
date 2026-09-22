@@ -1,0 +1,7 @@
+.rbac-admin-state, .rbac-admin-empty, .rbac-admin-alert { padding: var(--rbac-admin-spacing-md); margin: var(--rbac-admin-spacing-sm) 0; border-radius: var(--rbac-admin-radius); background: var(--rbac-admin-bg-muted); color: var(--rbac-admin-text-secondary); overflow-wrap: anywhere; }
+.rbac-admin-empty { text-align: center; padding: var(--rbac-admin-spacing-lg); }
+.rbac-admin-alert--error { color: var(--rbac-admin-danger); border: 1px solid currentColor; }
+.rbac-admin-state--success { color: var(--rbac-admin-success); }
+.rbac-admin-badge, .rbac-admin-permission-tag { display: inline-block; max-width: 100%; box-sizing: border-box; padding: 2px 8px; border: 1px solid var(--rbac-admin-border); border-radius: var(--rbac-admin-radius); background: var(--rbac-admin-bg-muted); color: var(--rbac-admin-text-secondary); font-size: 13px; font-weight: 400; overflow-wrap: anywhere; }
+.rbac-admin-badge--success { color: var(--rbac-admin-success); border-color: currentColor; }
+.rbac-admin-permission-tag { color: var(--rbac-admin-text); }

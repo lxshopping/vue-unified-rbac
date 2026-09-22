@@ -158,8 +158,9 @@ test('matrix edit requires host opt-in, API capability and manage permission', a
     const f = await fixture('RolePermissionMatrixView', options)
     await flush()
     assert.match(f.ui.text(), /只读模式/)
-    assert.equal(f.ui.all('input')[0].props.disabled, true)
-    assert.equal(f.ui.all('button').find(b => b.text.startsWith('保存')).props.disabled, true)
+    assert.equal(f.ui.all('input').length, 0)
+    assert.equal(f.ui.all('button').filter(b => b.text.startsWith('保存')).length, 0)
+    assert.match(f.ui.text(), /✓/)
     f.ui.app.unmount()
   }
 })
@@ -217,12 +218,12 @@ test('matrix empty and API error states fail closed', async () => {
 
 test('MyAccessView uses only AccessStore and failed /me refresh removes displayed access', async () => {
   const f = await fixture('MyAccessView')
-  assert.match(f.ui.text(), /username: user/)
-  assert.match(f.ui.text(), /auth_source: local/)
+  assert.match(f.ui.text(), /用户名 user/)
+  assert.match(f.ui.text(), /认证来源 local/)
   f.failMe()
   await f.ui.click('刷新权限')
   assert.match(f.ui.text(), /加载失败/)
-  assert.doesNotMatch(f.ui.text(), /username: user/)
+  assert.doesNotMatch(f.ui.text(), /用户名 user/)
   assert.equal(f.rbac.accessStore.hasPermission(permissions.meView), false)
   f.ui.app.unmount()
 })
@@ -249,5 +250,24 @@ test('matrix successful write followed by failed /me revokes authorization', asy
   assert.match(f.ui.text(), /权限不足/)
   assert.equal(f.rbac.accessStore.hasPermission(permissions.roleManage), false)
   assert.equal(f.ui.all('input').length, 0)
+  f.ui.app.unmount()
+})
+
+
+test('transposed matrix saves the selected role column without changing another role', async () => {
+  const api = fakeApi()
+  let saved
+  api.listRoles = async () => [role, { code: 'viewer' }]
+  api.listPermissions = async () => [{ code: 'deploy' }, { code: 'read' }]
+  api.getRolePermissions = async code => code === 'operator' ? ['deploy', 'unlisted.code'] : ['read']
+  api.updateRolePermissions = async (code, codes) => { saved = { code, codes: Array.from(codes) } }
+  const f = await fixture('RolePermissionMatrixView', { api })
+  await flush()
+  const inputs = f.ui.all('input')
+  assert.deepEqual(inputs.map(input => input.props['aria-label']), ['operator: deploy', 'viewer: deploy', 'operator: read', 'viewer: read'])
+  inputs[1].props.onChange({ target: { checked: true } })
+  await f.ui.click('保存 viewer')
+  assert.deepEqual(saved, { code: 'viewer', codes: ['read', 'deploy'] })
+  assert.equal(f.ui.all('input')[0].props.checked, true)
   f.ui.app.unmount()
 })

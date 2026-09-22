@@ -1,0 +1,16 @@
+:root {
+  --rbac-admin-bg: #ffffff;
+  --rbac-admin-bg-muted: #f7f8fa;
+  --rbac-admin-text: #1f2329;
+  --rbac-admin-text-secondary: #646a73;
+  --rbac-admin-border: #e5e6eb;
+  --rbac-admin-primary: #1668dc;
+  --rbac-admin-success: #237b32;
+  --rbac-admin-danger: #c62828;
+  --rbac-admin-warning: #946200;
+  --rbac-admin-radius: 6px;
+  --rbac-admin-spacing-xs: 4px;
+  --rbac-admin-spacing-sm: 8px;
+  --rbac-admin-spacing-md: 16px;
+  --rbac-admin-spacing-lg: 24px;
+}

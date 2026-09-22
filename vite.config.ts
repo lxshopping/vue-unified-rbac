@@ -9,6 +9,7 @@ export default defineConfig(({ command, mode }) => {
     resolve: {
       alias: {
         '@': fileURLToPath(new URL('./src/demo', import.meta.url)),
+        '@scotec/vue-unified-rbac/style.css': fileURLToPath(new URL('./dist/style.css', import.meta.url)),
         '@scotec/vue-unified-rbac': fileURLToPath(new URL('./src/lib/index.ts', import.meta.url)),
       },
     },
@@ -29,8 +30,9 @@ export default defineConfig(({ command, mode }) => {
       outDir: 'dist',
       copyPublicDir: false,
       lib: {
-        entry: fileURLToPath(new URL('./src/lib/index.ts', import.meta.url)),
+        entry: fileURLToPath(new URL('./src/lib-entry.ts', import.meta.url)),
         name: 'VueUnifiedRbac',
+        cssFileName: 'style',
         formats: ['es'],
         fileName: () => 'index.js',
       },

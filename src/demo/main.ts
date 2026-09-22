@@ -6,6 +6,7 @@ import { authenticationError, auth } from './auth/keycloak'
 import { createRbacPlugin, installRbacGuard } from '@scotec/vue-unified-rbac'
 import { fetchMyAccess } from './api/rbac'
 import './style.css'
+import '@scotec/vue-unified-rbac/style.css'
 
 async function bootstrap() {
   try {
@@ -50,7 +51,9 @@ async function bootstrap() {
   }
 }
 
-if (import.meta.env.VITE_RBAC_V3 === 'true') {
+if (new URLSearchParams(window.location.search).has('admin-demo')) {
+  void import('./admin/bootstrap').then(({ bootstrapAdminDemo }) => bootstrapAdminDemo())
+} else if (import.meta.env.VITE_RBAC_V3 === 'true') {
   void import('./v3/bootstrap').then(({ bootstrapV3 }) => bootstrapV3())
 } else {
   void bootstrap()

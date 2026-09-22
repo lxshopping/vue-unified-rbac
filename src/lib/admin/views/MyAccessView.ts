@@ -1,6 +1,7 @@
 import { defineComponent, h } from 'vue'
 import { useRbac } from '../../plugin'
 import { useRbacAdmin } from '../context'
+import { status } from './shared'
 
 export default defineComponent({
   name: 'MyAccessView',
@@ -11,15 +12,26 @@ export default defineComponent({
       // Allows recovery after a failed /me without revealing old data.
       try { await store.loadAccess() } catch { /* Store owns the only error/access state. */ }
     }
-    return () => h('section', { class: 'rbac-admin', 'aria-busy': store.loading }, [
-      h('h2', '当前用户权限'),
-      h('button', { type: 'button', disabled: store.loading, onClick: reload }, '刷新权限'),
-      store.loading ? h('p', { role: 'status' }, '正在加载…') : null,
-      store.error ? h('p', { role: 'alert' }, '权限加载失败，请重试。') : null,
-      !store.hasPermission(admin.permissions.meView) ? h('p', { role: 'alert' }, '权限不足') : [
-        h('p', 'username: ' + store.username), h('p', 'auth_source: ' + (store.authSource ?? '—')),
-        h('h3', '角色'), store.roles.length ? h('ul', store.roles.map(code => h('li', { key: code }, code))) : h('p', '无角色'),
-        h('h3', '权限'), store.permissions.length ? h('ul', store.permissions.map(code => h('li', { key: code }, code))) : h('p', '无权限'),
+    return () => h('section', { class: 'rbac-admin-page', 'aria-busy': store.loading }, [
+      h('div', { class: 'rbac-admin-header' }, [
+        h('div', [h('h2', { class: 'rbac-admin-title' }, '当前用户权限'), h('p', { class: 'rbac-admin-description' }, '查看当前登录用户的身份、角色和权限。')]),
+        h('div', { class: 'rbac-admin-toolbar' }, [h('button', { class: 'rbac-admin-button rbac-admin-button--secondary', type: 'button', disabled: store.loading, onClick: reload }, '刷新权限')]),
+      ]),
+      store.loading ? status('正在加载…') : null,
+      store.error ? status('权限加载失败，请重试。', 'error') : null,
+      !store.hasPermission(admin.permissions.meView) ? status('权限不足', 'error') : [
+        h('div', { class: 'rbac-admin-card' }, [
+          h('h3', { class: 'rbac-admin-section-title' }, '用户信息'),
+          h('dl', { class: 'rbac-admin-user-info' }, [h('dt', '用户名'), h('dd', store.username), h('dt', '认证来源'), h('dd', store.authSource ?? '—')]),
+        ]),
+        h('div', { class: 'rbac-admin-card' }, [
+          h('h3', { class: 'rbac-admin-section-title' }, '角色'),
+          store.roles.length ? h('ul', { class: 'rbac-admin-tags' }, store.roles.map(code => h('li', { class: 'rbac-admin-badge rbac-admin-code', key: code }, code))) : status('无角色', 'empty'),
+        ]),
+        h('div', { class: 'rbac-admin-card' }, [
+          h('h3', { class: 'rbac-admin-section-title' }, '权限'),
+          store.permissions.length ? h('ul', { class: 'rbac-admin-tags' }, store.permissions.map(code => h('li', { class: 'rbac-admin-permission-tag rbac-admin-code', key: code }, code))) : status('无权限', 'empty'),
+        ]),
       ],
     ])
   },
