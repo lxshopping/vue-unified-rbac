@@ -3,6 +3,8 @@ export interface AccessResult {
   auth_source?: string
   /** Compatibility with hosts that already map auth_source to camelCase. */
   authSource?: string
+  role_source?: string
+  roleSource?: string
   roles: string[]
   permissions: string[]
 }
@@ -19,7 +21,9 @@ export function normalizeAccess(data: unknown): AccessResult {
     !strings(value.roles) || !strings(value.permissions) ||
     (value.username !== undefined && typeof value.username !== 'string') ||
     (value.auth_source !== undefined && typeof value.auth_source !== 'string') ||
-    (value.authSource !== undefined && typeof value.authSource !== 'string')
+    (value.authSource !== undefined && typeof value.authSource !== 'string') ||
+    (value.role_source !== undefined && typeof value.role_source !== 'string') ||
+    (value.roleSource !== undefined && typeof value.roleSource !== 'string')
   ) {
     throw new Error('加载权限失败：AccessResult 格式异常')
   }
@@ -27,6 +31,8 @@ export function normalizeAccess(data: unknown): AccessResult {
     username: value.username,
     auth_source: value.auth_source,
     authSource: value.authSource,
+    ...(value.role_source !== undefined || value.roleSource !== undefined
+      ? { role_source: (value.role_source ?? value.roleSource) as string } : {}),
     roles: [...value.roles],
     permissions: [...value.permissions],
   }

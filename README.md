@@ -595,3 +595,14 @@ import '@scotec/vue-unified-rbac/style.css'
 ```
 
 库提供隔离的基础样式和可覆盖的 CSS Variables，JS 公共 API 保持不变。完整接入、主题设置与无后端 Demo 见 [Admin UI 文档](docs/11-admin-ui.md)。
+
+### Admin 0.3.2
+
+提供角色 CRUD、角色权限矩阵、本地用户角色和当前用户权限四个页面。
+`createRbacAdminApi(request)` 默认适配 drf_unified_rbac 0.3.2（DRF 分页、ID 路由、
+`enabled` 和角色来源字段），复用宿主已经配置认证的 Axios 实例。
+原有 endpoints/adapters 和插件初始化继续兼容；自定义 API 如需启用新增管理功能，
+补齐可选 CRUD/UserRole 方法并保留 `editable: true` 的显式编辑开关。
+角色/用户角色新增操作权限分别默认 `rbac.role.create/update/delete` 与
+`rbac.user_role.view/update`。SSO 用户角色仍由 Keycloak 管理。
+详见仓库 `docs/11-admin-ui.md`；包内包含全部异步页面、类型声明和 `style.css`。

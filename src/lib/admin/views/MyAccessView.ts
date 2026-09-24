@@ -1,7 +1,7 @@
 import { defineComponent, h } from 'vue'
 import { useRbac } from '../../plugin'
 import { useRbacAdmin } from '../context'
-import { status } from './shared'
+import { roleSourceLabel, status } from './shared'
 
 export default defineComponent({
   name: 'MyAccessView',
@@ -22,10 +22,11 @@ export default defineComponent({
       !store.hasPermission(admin.permissions.meView) ? status('权限不足', 'error') : [
         h('div', { class: 'rbac-admin-card' }, [
           h('h3', { class: 'rbac-admin-section-title' }, '用户信息'),
-          h('dl', { class: 'rbac-admin-user-info' }, [h('dt', '用户名'), h('dd', store.username), h('dt', '认证来源'), h('dd', store.authSource ?? '—')]),
+          h('dl', { class: 'rbac-admin-user-info' }, [h('dt', '用户名'), h('dd', store.username), h('dt', '认证来源'), h('dd', store.authSource ?? '—'), h('dt', '角色来源'), h('dd', roleSourceLabel(store.me?.role_source ?? store.me?.roleSource))]),
         ]),
         h('div', { class: 'rbac-admin-card' }, [
           h('h3', { class: 'rbac-admin-section-title' }, '角色'),
+          store.authSource === 'sso' && (store.me?.role_source ?? store.me?.roleSource) === 'keycloak' ? h('p', { class: 'rbac-admin-description' }, 'SSO 用户角色由 Keycloak 管理。') : null,
           store.roles.length ? h('ul', { class: 'rbac-admin-tags' }, store.roles.map(code => h('li', { class: 'rbac-admin-badge rbac-admin-code', key: code }, code))) : status('无角色', 'empty'),
         ]),
         h('div', { class: 'rbac-admin-card' }, [

@@ -1,0 +1,7 @@
+.rbac-admin-dialog { box-sizing: border-box; width: min(520px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow: auto; padding: var(--rbac-admin-spacing-lg); border: 1px solid var(--rbac-admin-border); border-radius: var(--rbac-admin-radius); background: var(--rbac-admin-bg); color: var(--rbac-admin-text); font: inherit; }
+.rbac-admin-dialog::backdrop { background: rgb(0 0 0 / .4); }
+.rbac-admin-field { display: flex; align-items: center; flex-wrap: wrap; gap: var(--rbac-admin-spacing-sm); margin-bottom: var(--rbac-admin-spacing-md); }
+.rbac-admin-input { box-sizing: border-box; width: 100%; padding: 8px 10px; border: 1px solid var(--rbac-admin-border); border-radius: var(--rbac-admin-radius); background: var(--rbac-admin-bg); color: var(--rbac-admin-text); font: inherit; }
+.rbac-admin-input:disabled { background: var(--rbac-admin-bg-muted); color: var(--rbac-admin-text-secondary); }
+.rbac-admin-input:focus-visible { outline: 2px solid var(--rbac-admin-primary); outline-offset: 2px; }
+.rbac-admin-role-options { max-height: 45vh; overflow: auto; padding: 4px; }
