@@ -22,7 +22,7 @@ export function installRbacGuard(router: Router, options: RouterGuardOptions): (
   }
 
   return router.beforeEach(async (to) => {
-    if (!(permissionMetaKey in to.meta)) return true
+    if (!(permissionMetaKey in to.meta) && to.meta.requiresAuth !== true) return true
 
     if (!accessStore.loaded || accessStore.loading) {
       try {
@@ -31,10 +31,11 @@ export function installRbacGuard(router: Router, options: RouterGuardOptions): (
         return redirect(to, options.accessErrorRoute ?? forbiddenRoute)
       }
     }
-    if (accessStore.error || !accessStore.me) {
+    if (!accessStore.isAuthenticated || accessStore.error || !accessStore.me) {
       return redirect(to, options.accessErrorRoute ?? forbiddenRoute)
     }
 
+    if (!(permissionMetaKey in to.meta)) return true
     const permission: unknown = to.meta[permissionMetaKey]
     if (typeof permission === 'string' && accessStore.hasPermission(permission)) return true
     return redirect(to, forbiddenRoute)

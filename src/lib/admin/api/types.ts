@@ -19,11 +19,13 @@ export interface LocalRbacUser {
   authSource?: string
   roleSource?: string
 }
-export interface UpdateUserRolesPayload { roles: string[] }
-export interface RbacPermission { code: string; name?: string; description?: string }
+export interface UpdateUserRolesPayload { role_codes: string[] }
+export interface RbacPermission { id?: string | number; code: string; name?: string; description?: string }
 export interface RbacAdminApi {
-  /** Explicit capability, false/absent means read-only. */
+  /** Deprecated matrix-only capability hint. False disables matrix writes; never gates other actions. */
   readonly supportsUpdates?: boolean
+  getRole?(id: string | number): Promise<RbacRole>
+  getPermission?(id: string | number): Promise<RbacPermission>
   listRoles(): Promise<RbacRole[]>
   createRole?(data: CreateRolePayload): Promise<void>
   updateRole?(id: string | number, data: UpdateRolePayload): Promise<void>
@@ -33,24 +35,26 @@ export interface RbacAdminApi {
   updateLocalUserRoles?(id: string | number, roles: string[]): Promise<void>
   listPermissions(): Promise<RbacPermission[]>
   getRolePermissions(role: string): Promise<string[]>
-  updateRolePermissions(role: string, permissions: string[]): Promise<void>
+  updateRolePermissions?(role: string, permissions: string[]): Promise<void>
   getMyAccess(): Promise<AccessResult>
 }
 export interface RbacAdminEndpoints {
   roles: string
   permissions: string
   rolePermissions: (role: string) => string
-  updateRolePermissions?: (role: string) => string
+  updateRolePermissions?: ((role: string) => string) | null
+  permissionDetail?: ((id: string | number) => string) | null
   me?: string
-  roleDetail?: (id: string | number) => string
-  localUsers?: string
-  localUserRoles?: (id: string | number) => string
-  updateLocalUserRoles?: (id: string | number) => string
+  roleDetail?: ((id: string | number) => string) | null
+  localUsers?: string | null
+  localUserRoles?: ((id: string | number) => string) | null
+  updateLocalUserRoles?: ((id: string | number) => string) | null
 }
 export interface RbacAdminApiOptions {
-  /** Omit endpoints to use the DRF 0.3.2 contract. Existing explicit endpoints retain their capabilities. */
-  endpoints?: RbacAdminEndpoints
+  /** Partial overrides merge with DRF 0.3.3 defaults. Null explicitly disables an optional capability; undefined inherits. */
+  endpoints?: Partial<RbacAdminEndpoints>
   basePath?: string
+  roleUpdateMethod?: 'patch' | 'put'
   updateMethod?: 'put' | 'patch' | 'post'
   /** Adapt envelopes/pagination here. Return the complete catalogue for a matrix. */
   adapters?: {

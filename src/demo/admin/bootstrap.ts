@@ -5,7 +5,9 @@ import type { RbacAdminApi, RbacRole } from '@scotec/vue-unified-rbac'
 /** Isolated in-memory showcase: no backend or authentication service required. */
 export async function bootstrapAdminDemo() {
   const permissions = { roleView: 'rbac.role.view', roleUpdate: 'rbac.role.update', roleCreate: 'rbac.role.create',
-    roleDelete: 'rbac.role.delete', userRoleView: 'rbac.user_role.view', userRoleUpdate: 'rbac.user_role.update', meView: 'rbac.me.view' }
+    roleDelete: 'rbac.role.delete', userRoleView: 'rbac.user_role.view', userRoleUpdate: 'rbac.user_role.update', rolePermissionView: 'rbac.role_permission.view',
+    rolePermissionUpdate: 'rbac.role_permission.update', permissionView: 'rbac.permission.view' }
+  const readOnly = new URLSearchParams(window.location.search).has('readonly')
   const codes = ['release.order.view', 'release.order.create', 'release.order.approve', ...Object.values(permissions)]
   const grants: Record<string, string[]> = { release_admin: [...codes], release_viewer: ['release.order.view'] }
   let roles: RbacRole[] = [
@@ -37,7 +39,7 @@ export async function bootstrapAdminDemo() {
       if (!next.includes('rbac_admin')) throw { response: { data: { detail: 'Cannot remove the last active rbac_admin.' } } }
       assigned = [...next]
     },
-    async getMyAccess() { return { username: 'demo.user', auth_source: 'local', role_source: 'rbac_db', roles: [...assigned], permissions: [...codes] } },
+    async getMyAccess() { return { username: 'demo.user', auth_source: 'local', role_source: 'rbac_db', roles: [...assigned], permissions: codes.filter(code => !readOnly || !/\.(create|update|delete)$/.test(code)) } },
   }
   const rbac = createRbacPlugin({ mode: 'local', loadAccess: () => api.getMyAccess() })
   rbac.auth.markLocalAuthenticated()

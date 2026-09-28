@@ -492,71 +492,122 @@ Admin 独立位于 `src/lib/admin`，没有 UI 框架依赖，使用 Vue 3 原�
 | RolePermissionMatrixView | Role × Permission；每角色保存、保存时禁用编辑、失败撤销草稿并重读服务端；保存成功刷新唯一 AccessStore 与矩阵 |
 | MyAccessView | 直接读取 AccessStore 的 username/auth_source/roles/permissions，刷新按钮调用 loadAccess；不使用 getMyAccess 创建副本 |
 
-### Admin API 与安装
+### Admin 0.3.3 接入
 
-仓库后端文档只确认 `/api/rbac/me`。管理端点必须显式配置，下面路径来自 **宿主配置对象**，不是宣称已经存在的 Django API：
+本版本对齐 drf-unified-rbac 0.3.3。Permission Registry 为只读目录，角色权限和本地用户角色分别授权。
+
+## 安装与权限
 
 ```ts
 import {
-  createRbacAdminApi, createRbacAdminPlugin,
-  createRbacAdminRoutes, createRbacAdminMenu,
+  createRbacAdminApi, createRbacAdminPlugin, createRbacAdminRoutes,
+  createRbacAdminMenu, filterMenus, installRbacGuard,
 } from '@scotec/vue-unified-rbac'
+import '@scotec/vue-unified-rbac/style.css'
 
-const adminPermissions = {
-  roleView: hostConfig.permissions.roleView,
-  roleManage: hostConfig.permissions.roleManage,
-  meView: hostConfig.permissions.meView,
+const permissions = {
+  roleView: 'rbac.role.view',
+  roleCreate: 'rbac.role.create',
+  roleUpdate: 'rbac.role.update',
+  roleDelete: 'rbac.role.delete',
+  rolePermissionView: 'rbac.role_permission.view',
+  rolePermissionUpdate: 'rbac.role_permission.update',
+  userRoleView: 'rbac.user_role.view',
+  userRoleUpdate: 'rbac.user_role.update',
+  permissionView: 'rbac.permission.view',
 }
-const api = createRbacAdminApi(request, {
-  endpoints: {
-    roles: hostConfig.rbac.rolesUrl,
-    permissions: hostConfig.rbac.permissionsUrl,
-    rolePermissions: code => hostConfig.rbac.rolePermissionsUrl(encodeURIComponent(code)),
-    // 后端确认支持写入后才提供；省略意味着只读。
-    // updateRolePermissions: code => hostConfig.rbac.updateRolePermissionsUrl(encodeURIComponent(code)),
-    me: '/api/rbac/me', // 缺省值；request.baseURL 为 /api 时改为 /rbac/me
-  },
-  // updateMethod: 'put', // 也支持 patch / post
-})
-app.use(createRbacAdminPlugin({ api, permissions: adminPermissions, editable: false }))
-
-const routeOptions = { basePath: '/rbac-admin', permissions: adminPermissions }
-for (const route of createRbacAdminRoutes(routeOptions)) router.addRoute(route)
-// 或作为 createRouter({ routes: [...createRbacAdminRoutes(routeOptions)] }) 的一部分。
-const adminMenus = createRbacAdminMenu(routeOptions)
-// 宿主将 adminMenus 转换为自己的菜单格式，再用 filterMenus 过滤。
+// request 复用宿主的 Local/SSO/Hybrid 凭据、CSRF 和错误处理。
+const api = createRbacAdminApi(request)
+app.use(createRbacAdminPlugin({ api, permissions, editable: true }))
+for (const route of createRbacAdminRoutes({ permissions })) router.addRoute(route)
+installRbacGuard(router, { accessStore: rbac.accessStore })
+// 放在 computed 内，使菜单随认证/权限变更重新计算。
+const menus = filterMenus(createRbacAdminMenu({ permissions }),
+  rbac.accessStore.hasPermission, rbac.accessStore.isAuthenticated)
 ```
 
-仍须手动安装 `installRbacGuard`。Admin routes 使用现有 permission meta，支持 `permissionMetaKey` / `namePrefix` / `basePath`；路由与 guard 的 meta key 必须一致。Admin plugin 与 routes 应复用同一 permissions 对象。页面内部也检查权限，直接嵌入页面不能绕过授权。权限码为必填，没有猜测的内置 rbac.*；服务端仍必须校验每个管理请求。
+九个 mapping 字段均可覆盖，省略字段使用上面的正式默认值；也可传 permissions: {}。
+插件和路由应共享同一 mapping。mapping 只配置权限名称，不授予权限；授权来自 /me。
 
-矩阵写入须同时满足 `editable: true`、`api.supportsUpdates === true`、AccessStore 中的 `roleManage` 权限和 `roleView` 权限。未列入权限目录的已有 grant 保存时保留，防止意外删除。当前实现按角色保存完整 permission code 数组，不提供跨角色事务；角色多时会按角色查询权限，大规模数据可提供自定义 API 缓存/批量适配。
+| 页面 | 路由/菜单 | 页面读取 | 写入 |
+| --- | --- | --- | --- |
+| 角色列表 | roleView | roleView | roleCreate / roleUpdate / roleDelete 独立判断 |
+| 角色权限矩阵 | rolePermissionView | roleView + permissionView + rolePermissionView，AND | rolePermissionUpdate |
+| 本地用户角色 | userRoleView | userRoleView | userRoleUpdate；编辑弹窗加载角色目录还需要 roleView |
+| 当前用户权限 | requiresAuth: true | 已认证且有效的 AccessStore 数据 | 仅刷新 /me |
 
-### 默认 HTTP 数据协议与适配
+当前用户页没有额外管理权限，普通业务用户可访问。guard 支持 requiresAuth；自定义 guard 须实现相同语义。
+filterMenus 新增可选第三参数 isAuthenticated，缺省 false，认证菜单默认隐藏；公共菜单和权限菜单保持原语义。
+permissionMetaKey 不能使用保留的 requiresAuth 或 rbacAdminTitle。
 
-下面是 **Library 的归一化协议，尚未确认真实后端完全匹配**：
+所有写按钮还需 editable === true 和相应 API 方法存在。supportsUpdates 仅保留为矩阵兼容提示，false 可禁用矩阵编辑，缺省由 updateRolePermissions 方法决定；不控制 Role CRUD/UserRole。
+矩阵缺少任一读取权限时不发送 API；只读矩阵显示 ✓ / —，没有复选框和保存按钮。
+
+## 默认 HTTP contract
+
+basePath 默认 /api/rbac/admin，可覆盖且会去除末尾斜杠。
+
+| 方法 | URL | Client |
+| --- | --- | --- |
+| GET / POST | /api/rbac/admin/roles/ | listRoles / createRole |
+| GET / PATCH / PUT / DELETE | /api/rbac/admin/roles/{id}/ | getRole / updateRole / deleteRole |
+| GET / PUT | /api/rbac/admin/roles/{id}/permissions/ | getRolePermissions / updateRolePermissions |
+| GET | /api/rbac/admin/permissions/ | listPermissions |
+| GET | /api/rbac/admin/permissions/{id}/ | getPermission |
+| GET | /api/rbac/admin/users/ | listLocalUsers |
+| GET / PUT | /api/rbac/admin/users/{id}/roles/ | getLocalUserRoles / updateLocalUserRoles |
+| GET | /api/rbac/me | getMyAccess |
+
+updateRole 默认 PATCH，roleUpdateMethod: 'put' 可切换 PUT。Permission 不提供创建、修改、删除方法或 UI。
+RolePermission 默认 PUT body 为 { permission_codes: string[] }，UserRole 默认 PUT body 为 { role_codes: string[] }。
+响应同时接受 canonical 字段和 permissions/roles alias 或裸数组；alias 不影响默认请求字段。
 
 ```ts
-interface RbacRole {
-  code: string
-  name?: string
-  active?: boolean
-  description?: string
-  permissionCount?: number
-}
-interface RbacPermission { code: string; name?: string; description?: string }
-interface RbacAdminApi {
-  readonly supportsUpdates?: boolean
-  listRoles(): Promise<RbacRole[]>
-  listPermissions(): Promise<RbacPermission[]>
-  getRolePermissions(role: string): Promise<string[]>
-  updateRolePermissions(role: string, permissions: string[]): Promise<void>
-  getMyAccess(): Promise<AccessResult>
-}
+// 只覆盖 me，所有其他默认能力仍存在。
+const api = createRbacAdminApi(request, { endpoints: { me: '/custom/me' } })
+// 显式关闭可选能力；undefined 仍继承默认值。
+const limited = createRbacAdminApi(request, { endpoints: {
+  localUsers: null, localUserRoles: null, updateLocalUserRoles: null,
+  updateRolePermissions: null, roleDetail: null,
+} })
 ```
 
-HTTP 默认读取裸数组；写入默认 PUT、body `{ permissions: string[] }`，忽略更新响应体并重新查询。可通过 `adapters.roles` / `permissions` / `rolePermissions` / `me` 适配 response envelope、enabled/active、permission_count 字段，通过 `adapters.updateBody` 改写请求体。端点函数负责对角色路径参数编码（例如 encodeURIComponent）。默认 client 验证数组、代码、重复项、角色字段与 `/me` 格式，异常直接拒绝。
+endpoints 是 Partial<RbacAdminEndpoints>，采用 merge，不再整体替换。
+roleDetail: null 关闭角色详情/修改/删除；createRole 使用 roles 集合端点，独立保留。
+如需关闭所有 UI 写入，使用 editable: false；自定义 API 可省略各写方法。
 
-如果列表存在分页，adapter 必须返回完整目录；只有同步数据转换的 adapters 不会自动请求 next page。需要多次分页/批量请求时，直接实现 RbacAdminApi 注入页面，禁止把分页响应的部分列表当成全部权限。后端是否支持写入、角色标识是 code 还是 ID、URL 尾斜杠、分页/envelope、更新方法/body、并发写入冲突策略和真实 permission codes 均须宿主与后端确认。本次没有真实 Admin 后端联调或账号验收。
+默认 RolePermission 函数接收 code，通过 listRoles 缓存的 code → id 查找 URL；先加载角色目录。
+自定义 rolePermissions/updateRolePermissions 回调仍接收 code。各 endpoint 独立覆盖，不会推导关联 endpoint。
+例如只覆盖 roles URL，不会自动改变 roleDetail；整组前缀变化应使用 basePath。
+/me 独立于 basePath。Axios baseURL 已含 /api 时，设置 basePath: '/rbac/admin' 和 endpoints.me: '/rbac/me'。
+
+列表自动读取 DRF page-number 分页全部 results，仅提取 next 页码，后续请求仍访问配置 URL。
+列表 adapter 若提供，须返回完整目录。角色转换 enabled/is_active → active、permission_count → permissionCount；
+本地用户稳定保留 id、username、roles，并转换 is_active、auth_source、role_source。
+
+角色创建可填 code，编辑 code 只读且默认更新体不包含 code。rbac_admin 或 protected/is_protected 为 true 的角色不可删除；缺少 ID 的旧目录行不显示编辑/删除。
+用户列表及当前角色只需 userRoleView，无更新权限仍正常展示。仅 Local/rbac_db 身份提供角色分配，SSO 角色由 Keycloak 管理。
+保存完整集合并保留目录外已有 code；成功刷新 AccessStore 与列表，失败展示后端校验信息，会话切换丢弃迟到结果。
+
+## Demo 与验证
+
+npm run dev 后打开 /?admin-demo&editable 演示 Role CRUD、矩阵修改和用户角色分配。
+/?admin-demo&editable&readonly 模拟有读取权限但没有写权限；/?admin-demo 为未开启 editable 的只读模式。
+Demo 使用内存数据，刷新恢复；Permission 目录只读，包含真实九项管理权限。
+
+运行 npm test、npm run type-check、npm run build、npm run build:demo、npm pack。
+项目没有 lint script。Node 要求 >=22.18.0。产物 scotec-vue-unified-rbac-0.3.3.tgz 包含 dist JS、异步页面、声明与 style.css。
+
+## 宿主升级
+
+删除为补齐默认 Role CRUD/UserRole 而写的 endpoint 补丁、标准响应 snake_case 转换 adapter、标准集合请求字段改写 adapter。
+旧合并写权限应改为独立九项 mapping；当前用户页的管理权限配置移除。
+保留宿主认证初始化、Axios 实例、Token/Session/CSRF、异常处理、路由挂载、guard、菜单转换、CSS 和 editable 显式开关。
+自定义 URL、非标准响应或特殊权限命名仍需保留相应配置。
+这是从旧 endpoint 整体替换改为合并的行为变化：需要禁用能力必须显式 null，不能再靠省略 endpoint。
+
+样式采用 .rbac-admin- 前缀和 --rbac-admin-* CSS Variables。必须显式导入 style.css，可覆盖 --rbac-admin-primary、--rbac-admin-bg、--rbac-admin-radius 等变量。
+
 
 ## 0.2.0 新增公共导出
 
@@ -596,13 +647,6 @@ import '@scotec/vue-unified-rbac/style.css'
 
 库提供隔离的基础样式和可覆盖的 CSS Variables，JS 公共 API 保持不变。完整接入、主题设置与无后端 Demo 见 [Admin UI 文档](docs/11-admin-ui.md)。
 
-### Admin 0.3.2
+### Admin 版本
 
-提供角色 CRUD、角色权限矩阵、本地用户角色和当前用户权限四个页面。
-`createRbacAdminApi(request)` 默认适配 drf_unified_rbac 0.3.2（DRF 分页、ID 路由、
-`enabled` 和角色来源字段），复用宿主已经配置认证的 Axios 实例。
-原有 endpoints/adapters 和插件初始化继续兼容；自定义 API 如需启用新增管理功能，
-补齐可选 CRUD/UserRole 方法并保留 `editable: true` 的显式编辑开关。
-角色/用户角色新增操作权限分别默认 `rbac.role.create/update/delete` 与
-`rbac.user_role.view/update`。SSO 用户角色仍由 Keycloak 管理。
-详见仓库 `docs/11-admin-ui.md`；包内包含全部异步页面、类型声明和 `style.css`。
+当前版本为 0.3.3，完整接入说明见 [Admin 文档](docs/11-admin-ui.md)。

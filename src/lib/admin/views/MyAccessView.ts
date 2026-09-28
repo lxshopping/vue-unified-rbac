@@ -1,13 +1,11 @@
 import { defineComponent, h } from 'vue'
 import { useRbac } from '../../plugin'
-import { useRbacAdmin } from '../context'
 import { roleSourceLabel, status } from './shared'
 
 export default defineComponent({
   name: 'MyAccessView',
   setup() {
     const { accessStore: store } = useRbac()
-    const admin = useRbacAdmin()
     async function reload() {
       // Allows recovery after a failed /me without revealing old data.
       try { await store.loadAccess() } catch { /* Store owns the only error/access state. */ }
@@ -19,7 +17,7 @@ export default defineComponent({
       ]),
       store.loading ? status('正在加载…') : null,
       store.error ? status('权限加载失败，请重试。', 'error') : null,
-      !store.hasPermission(admin.permissions.meView) ? status('权限不足', 'error') : [
+      !store.isAuthenticated || !store.me || store.loading || !!store.error ? status('权限不足', 'error') : [
         h('div', { class: 'rbac-admin-card' }, [
           h('h3', { class: 'rbac-admin-section-title' }, '用户信息'),
           h('dl', { class: 'rbac-admin-user-info' }, [h('dt', '用户名'), h('dd', store.username), h('dt', '认证来源'), h('dd', store.authSource ?? '—'), h('dt', '角色来源'), h('dd', roleSourceLabel(store.me?.role_source ?? store.me?.roleSource))]),

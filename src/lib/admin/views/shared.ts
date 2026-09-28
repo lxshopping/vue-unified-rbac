@@ -1,6 +1,7 @@
 import { computed, defineComponent, h, onActivated, onMounted, onScopeDispose, onUnmounted, ref, shallowRef, watch } from 'vue'
 import type { Ref, VNodeChild } from 'vue'
 import { useRbac } from '../../plugin'
+import type { RbacAdminPermissions } from '../types'
 import { useRbacAdmin } from '../context'
 
 export function errorMessage(cause: unknown, fallback = '操作失败，请重试。'): string {
@@ -17,10 +18,10 @@ export function errorMessage(cause: unknown, fallback = '操作失败，请重�
 export function roleSourceLabel(source?: string): string {
   return source === 'rbac_db' ? 'RBAC Database' : source === 'keycloak' ? 'Keycloak' : source ?? '—'
 }
-export function useAdminResource<T>(loader: () => Promise<T>, permission: 'roleView' | 'userRoleView' = 'roleView') {
+export function useAdminResource<T>(loader: () => Promise<T>, permission: keyof RbacAdminPermissions | (keyof RbacAdminPermissions)[] = 'roleView') {
   const rbac = useRbac()
   const admin = useRbacAdmin()
-  const allowed = computed(() => rbac.accessStore.hasPermission(admin.permissions[permission]))
+  const allowed = computed(() => rbac.accessStore.hasAllPermissions((Array.isArray(permission) ? permission : [permission]).map(key => admin.permissions[key])))
   const data = shallowRef<T | null>(null)
   const loading = ref(false)
   const error = ref('')

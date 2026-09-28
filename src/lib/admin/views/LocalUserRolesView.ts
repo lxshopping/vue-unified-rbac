@@ -26,6 +26,10 @@ export default defineComponent({
       const user = selected.value
       if (!user || !isLocal(user)) return
       ready.value = false
+      if (!state.rbac.accessStore.hasPermission(state.admin.permissions.roleView)) {
+        editor.error.value = '缺少角色目录查看权限，无法加载可选角色。'
+        return
+      }
       await editor.run(async current => {
         const [candidates, assigned] = await Promise.all([api.listRoles(), api.getLocalUserRoles!(user.id)])
         if (!current()) return

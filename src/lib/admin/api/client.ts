@@ -58,17 +58,22 @@ export function createRbacAdminApi(instance: AxiosInstance, options: RbacAdminAp
     return detail(id) + 'permissions/'
   }
   const userRoles = (id: string | number) => base + '/users/' + encodeURIComponent(String(id)) + '/roles/'
-  const e: RbacAdminEndpoints = options.endpoints ?? {
+  const defaults: RbacAdminEndpoints = {
     roles: base + '/roles/', permissions: base + '/permissions/', roleDetail: detail,
+    permissionDetail: id => base + '/permissions/' + encodeURIComponent(String(id)) + '/',
+    me: '/api/rbac/me',
     rolePermissions, updateRolePermissions: rolePermissions,
     localUsers: base + '/users/', localUserRoles: userRoles, updateLocalUserRoles: userRoles,
   }
-  function endpoint(url: string | undefined): string {
+  const e: RbacAdminEndpoints = { ...defaults,
+    ...Object.fromEntries(Object.entries(options.endpoints ?? {}).filter(([, value]) => value !== undefined)),
+  }
+  function endpoint(url: string | null | undefined): string {
     if (typeof url !== 'string' || !url.trim()) throw new Error('Admin endpoint must be configured')
     return url
   }
   // Request every DRF page using the configured URL, never a server-provided host.
-  async function list(url: string | undefined, adapter?: (data: unknown) => unknown): Promise<unknown> {
+  async function list(url: string | null | undefined, adapter?: (data: unknown) => unknown): Promise<unknown> {
     const target = endpoint(url)
     let data: unknown = (await instance.get(target)).data
     if (adapter) return adapter(data)
@@ -87,9 +92,9 @@ export function createRbacAdminApi(instance: AxiosInstance, options: RbacAdminAp
       data = (await instance.get(target, { params: { page: next } })).data
     }
   }
-  function roleBody(data: CreateRolePayload | UpdateRolePayload) {
+  function roleBody(data: CreateRolePayload | UpdateRolePayload, creating = false) {
     if (a.roleBody) return a.roleBody(data)
-    return { ...('code' in data ? { code: data.code } : {}),
+    return { ...(creating && 'code' in data ? { code: data.code } : {}),
       ...(data.name !== undefined ? { name: data.name } : {}),
       ...(data.description !== undefined ? { description: data.description } : {}),
       ...(data.active !== undefined ? { enabled: data.active } : {}) }
@@ -102,22 +107,26 @@ export function createRbacAdminApi(instance: AxiosInstance, options: RbacAdminAp
       for (const entry of roles) if (entry.id !== undefined) roleIds.set(entry.code, entry.id)
       return roles
     },
+    async createRole(data: CreateRolePayload) { await instance.post(endpoint(e.roles), roleBody(data, true)) },
     ...(e.roleDetail ? {
-      async createRole(data: CreateRolePayload) { await instance.post(endpoint(e.roles), roleBody(data)) },
-      async updateRole(id: string | number, data: UpdateRolePayload) { await instance.patch(endpoint(e.roleDetail!(id)), roleBody(data)) },
+      async getRole(id: string | number) { return role(catalogue([(await instance.get(endpoint(e.roleDetail!(id)))).data])[0]) },
+      async updateRole(id: string | number, data: UpdateRolePayload) { await instance.request({ url: endpoint(e.roleDetail!(id)), method: options.roleUpdateMethod ?? 'patch', data: roleBody(data) }) },
       async deleteRole(id: string | number) { await instance.delete(endpoint(e.roleDetail!(id))) },
     } : {}),
+    ...(e.permissionDetail ? { async getPermission(id: string | number) {
+      return catalogue([(await instance.get(endpoint(e.permissionDetail!(id)))).data])[0] as unknown as RbacPermission
+    } } : {}),
     async listPermissions() { return catalogue(await list(e.permissions, a.permissions)).map(v => ({ ...v }) as unknown as RbacPermission) },
     async getRolePermissions(code) {
       const data: unknown = (await instance.get(endpoint(e.rolePermissions(code)))).data
       return a.rolePermissions ? codes(a.rolePermissions(data)) : codeSet(data, 'permission_codes', 'permissions')
     },
-    async updateRolePermissions(code, permissions) {
+    ...(e.updateRolePermissions ? { async updateRolePermissions(code: string, permissions: string[]) {
       if (!e.updateRolePermissions) throw new Error('Admin API is read-only')
       const validated = codes(permissions)
-      await instance.request({ url: endpoint(e.updateRolePermissions(code)), method: options.updateMethod ?? 'put',
-        data: a.updateBody ? a.updateBody(validated) : { permissions: validated } })
-    },
+      await instance.request({ url: endpoint(e.updateRolePermissions!(code)), method: options.updateMethod ?? 'put',
+        data: a.updateBody ? a.updateBody(validated) : { permission_codes: validated } })
+    } } : {}),
     ...(e.localUsers ? { async listLocalUsers() {
       const data = await list(e.localUsers, a.localUsers)
       if (!Array.isArray(data)) throw new Error('Invalid local users')
@@ -131,7 +140,7 @@ export function createRbacAdminApi(instance: AxiosInstance, options: RbacAdminAp
     } } : {}),
     ...(e.updateLocalUserRoles ? { async updateLocalUserRoles(id: string | number, roles: string[]) {
       const validated = codes(roles)
-      await instance.put(endpoint(e.updateLocalUserRoles!(id)), a.userRolesBody ? a.userRolesBody(validated) : { roles: validated })
+      await instance.put(endpoint(e.updateLocalUserRoles!(id)), a.userRolesBody ? a.userRolesBody(validated) : { role_codes: validated })
     } } : {}),
     async getMyAccess() {
       const data: unknown = (await instance.get(endpoint(e.me ?? '/api/rbac/me'))).data

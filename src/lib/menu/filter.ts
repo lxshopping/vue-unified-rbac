@@ -1,4 +1,5 @@
 export interface PermissionMenuItem {
+  requiresAuth?: boolean
   permission?: string
   children?: readonly PermissionMenuItem[]
 }
@@ -6,8 +7,10 @@ export interface PermissionMenuItem {
 export function filterMenus<T extends object>(
   menus: readonly (T & PermissionMenuItem)[],
   hasPermission: (permission: string) => boolean,
+  isAuthenticated = false,
 ): T[] {
   return menus.flatMap((menu) => {
+    if (menu.requiresAuth === true && !isAuthenticated) return []
     // 缺省 permission 才是公共菜单；显式传入空值或非法类型时拒绝显示。
     if (
       'permission' in menu &&
@@ -17,7 +20,7 @@ export function filterMenus<T extends object>(
     }
 
     if (menu.children) {
-      const children = filterMenus(menu.children, hasPermission)
+      const children = filterMenus(menu.children, hasPermission, isAuthenticated)
       return children.length ? [{ ...menu, children }] : []
     }
 

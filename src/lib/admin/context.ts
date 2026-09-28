@@ -4,9 +4,6 @@ import type { RbacAdminOptions, RbacAdminPermissions } from './types'
 type ResolvedOptions = Omit<RbacAdminOptions, 'permissions'> & { permissions: Required<RbacAdminPermissions> }
 const adminKey: InjectionKey<Readonly<ResolvedOptions>> = Symbol('scotec:rbac:admin')
 export function validateAdminPermissions(permissions: RbacAdminPermissions): void {
-  for (const key of ['roleView', 'meView'] as const) {
-    if (typeof permissions?.[key] !== 'string' || !permissions[key].trim()) throw new Error('Configure admin permission: ' + key)
-  }
   for (const [key, value] of Object.entries(permissions)) {
     if (value !== undefined && (typeof value !== 'string' || !value.trim())) throw new Error('Configure admin permission: ' + key)
   }
@@ -14,11 +11,13 @@ export function validateAdminPermissions(permissions: RbacAdminPermissions): voi
 export function resolveAdminPermissions(permissions: RbacAdminPermissions): Required<RbacAdminPermissions> {
   validateAdminPermissions(permissions)
   return {
-    roleView: permissions.roleView, meView: permissions.meView,
+    roleView: permissions.roleView ?? 'rbac.role.view',
+    rolePermissionView: permissions.rolePermissionView ?? 'rbac.role_permission.view',
+    rolePermissionUpdate: permissions.rolePermissionUpdate ?? 'rbac.role_permission.update',
+    permissionView: permissions.permissionView ?? 'rbac.permission.view',
     roleCreate: permissions.roleCreate ?? 'rbac.role.create',
     roleUpdate: permissions.roleUpdate ?? 'rbac.role.update',
     roleDelete: permissions.roleDelete ?? 'rbac.role.delete',
-    roleManage: permissions.roleManage ?? permissions.roleUpdate ?? 'rbac.role.update',
     userRoleView: permissions.userRoleView ?? 'rbac.user_role.view',
     userRoleUpdate: permissions.userRoleUpdate ?? 'rbac.user_role.update',
   }

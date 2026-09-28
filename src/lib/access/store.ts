@@ -15,6 +15,7 @@ interface AccessStoreOptions {
 
 function defineAccessStore({ auth, loadAccess }: AccessStoreOptions) {
   return defineStore('scotec:rbac:access', () => {
+    const isAuthenticated = computed(() => auth.isAuthenticated())
     const me = ref<AccessResult | null>(null)
     // 复用 me，保持现有页面兼容，不维护第二份权限状态。
     const username = computed(() => me.value?.username ?? '')
@@ -123,6 +124,7 @@ function defineAccessStore({ auth, loadAccess }: AccessStoreOptions) {
     }
 
     return {
+      isAuthenticated,
       me,
       username,
       authSource,

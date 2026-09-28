@@ -18,7 +18,7 @@ const rbac = createRbacPlugin({ pinia: createPinia(), auth,
 })
 rbac.auth.setAuthSource(source)
 void rbac.accessStore.loadAccess
-const permissions: RbacAdminPermissions = { roleView: 'host.view', roleManage: 'host.manage', meView: 'host.me' }
+const permissions: RbacAdminPermissions = { roleView: 'host.view', rolePermissionUpdate: 'host.manage' }
 const api = createRbacAdminApi(request, { endpoints: {
   roles: '/configured/roles', permissions: '/configured/permissions',
   rolePermissions: code => '/configured/roles/' + encodeURIComponent(code),

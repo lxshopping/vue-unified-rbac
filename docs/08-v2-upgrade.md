@@ -79,9 +79,9 @@ Host createRbacAdminRoutes(options) → router.addRoute
 Host createRbacAdminMenu(options) → 宿主菜单适配 → filterMenus
 ```
 
-所有管理路由使用现有 guard 的权限 meta；页面自己也检查权限。修改矩阵必须同时具有 roleView、roleManage、editable=true 和 API supportsUpdates=true。页面不直接 import axios。保存按角色进行；先更新，再刷新 /me 和管理数据；失败撤销本地草稿并重新查询，无法查询时不保留可编辑旧矩阵。写入成功但重新读取失败不会显示“保存成功并已刷新”的误导反馈。
+当前 0.3.3 管理路由使用 permission 或 requiresAuth meta；矩阵读取要求 roleView、permissionView、rolePermissionView，修改还需 rolePermissionUpdate、editable=true 和更新 API 方法。页面不直接 import axios。保存按角色进行；先更新，再刷新 /me 和管理数据；失败撤销本地草稿并重新查询，无法查询时不保留可编辑旧矩阵。写入成功但重新读取失败不会显示“保存成功并已刷新”的误导反馈。
 
-默认 client 的管理 endpoints 全部显式配置，只有 me 默认 `/api/rbac/me`。提供 roles/permissions/rolePermissions/me 响应 adapters 和 updateBody、updateMethod；未配置更新端点即只读。复杂分页/批量/服务端冲突策略可由自定义 RbacAdminApi 实现。当前矩阵每个角色查询一次权限，不承诺大规模矩阵虚拟化。
+0.3.3 默认 client 提供完整 DRF 管理 endpoints，自定义配置采用合并。提供 roles/permissions/rolePermissions/me 响应 adapters 和 updateBody、updateMethod；显式 null 禁用更新端点。复杂分页/批量/服务端冲突策略可由自定义 RbacAdminApi 实现。当前矩阵每个角色查询一次权限，不承诺大规模矩阵虚拟化。
 
 ## 新增 public exports
 

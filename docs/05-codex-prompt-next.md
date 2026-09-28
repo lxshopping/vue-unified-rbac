@@ -44,7 +44,7 @@ Vue 登录后从后端 GET /api/rbac/me 获取当前用户 roles 和 permissions
 - 后端菜单 API
 - v-permission directive
 - Role CRUD
-- Permission CRUD
+- Permission Registry 只读目录
 - RolePermission Matrix 保存
 - UserRole 修改
 - Keycloak SDK

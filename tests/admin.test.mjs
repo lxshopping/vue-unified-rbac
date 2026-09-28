@@ -6,7 +6,7 @@ import axios from 'axios'
 import { harness } from './helpers/harness.mjs'
 import { mountView, flush } from './helpers/renderer.mjs'
 
-const permissions = { roleView: 'host.roles.read', roleManage: 'host.roles.write', meView: 'host.me.read' }
+const permissions = { roleView: 'host.roles.read', rolePermissionUpdate: 'host.grants.write', rolePermissionView: 'host.grants.read', permissionView: 'host.registry.read' }
 const allPermissions = Object.values(permissions)
 const role = { code: 'operator', name: 'Operator', active: true, permissionCount: 1, description: 'Operations' }
 function fakeApi() {
@@ -68,9 +68,9 @@ test('HTTP admin API is read-only without update endpoint, rejects malformed cat
   let data = [{}]
   let calls = 0
   request.defaults.adapter = async config => { calls++; return { config, data, status: 200, statusText: 'OK', headers: {} } }
-  const api = lib.createRbacAdminApi(request, { endpoints: { roles: '/r', permissions: '/p', rolePermissions: () => '/rp' } })
+  const api = lib.createRbacAdminApi(request, { endpoints: { roles: '/r', permissions: '/p', rolePermissions: () => '/rp', updateRolePermissions: null } })
   assert.equal(api.supportsUpdates, false)
-  await assert.rejects(api.updateRolePermissions('r', []), /read-only/)
+  assert.equal(api.updateRolePermissions, undefined)
   assert.equal(calls, 0)
   for (const method of ['listRoles', 'listPermissions', 'getRolePermissions', 'getMyAccess']) await assert.rejects(api[method]('r'))
   data = [role, role]
@@ -83,11 +83,12 @@ test('HTTP admin API is read-only without update endpoint, rejects malformed cat
 
 test('admin route and menu helpers require explicit permission codes and support custom paths/meta', async () => {
   const { lib } = await harness()
-  assert.throws(() => lib.createRbacAdminRoutes({ permissions: {} }), /Configure/)
+  assert.throws(() => lib.createRbacAdminRoutes({ permissions: { roleView: '' } }), /Configure/)
   const routes = lib.createRbacAdminRoutes({ permissions, basePath: '/settings/rbac/', namePrefix: 'settings', permissionMetaKey: 'capability' })
   assert.deepEqual(Array.from(routes, r => r.path), ['/settings/rbac/roles', '/settings/rbac/role-permissions', '/settings/rbac/local-user-roles', '/settings/rbac/me'])
   assert.equal(routes[0].meta.capability, permissions.roleView)
-  assert.equal(routes[3].meta.capability, permissions.meView)
+  assert.equal(routes[3].meta.requiresAuth, true)
+  assert.equal('capability' in routes[3].meta, false)
   assert.equal(typeof routes[0].component, 'function')
   assert.equal(lib.createRbacAdminMenu({ permissions })[0].permission, permissions.roleView)
   const pinia = createPinia()
@@ -127,7 +128,7 @@ test('RoleListView renders loading, success, empty, error and reload using the A
 })
 
 test('admin views deny missing permissions even when mounted without a router guard', async () => {
-  for (const view of ['RoleListView', 'RolePermissionMatrixView', 'MyAccessView']) {
+  for (const view of ['RoleListView', 'RolePermissionMatrixView']) {
     const api = fakeApi()
     let called = false
     api.listRoles = async () => { called = true; return [role] }
@@ -154,7 +155,7 @@ test('pending admin results cannot reappear after logout', async () => {
 })
 
 test('matrix edit requires host opt-in, API capability and manage permission', async () => {
-  for (const options of [{ editable: false }, { codes: [permissions.roleView] }, { api: { ...fakeApi(), supportsUpdates: false } }]) {
+  for (const options of [{ editable: false }, { codes: [permissions.roleView, permissions.rolePermissionView, permissions.permissionView] }, { api: { ...fakeApi(), supportsUpdates: false } }]) {
     const f = await fixture('RolePermissionMatrixView', options)
     await flush()
     assert.match(f.ui.text(), /只读模式/)
@@ -224,7 +225,7 @@ test('MyAccessView uses only AccessStore and failed /me refresh removes displaye
   await f.ui.click('刷新权限')
   assert.match(f.ui.text(), /加载失败/)
   assert.doesNotMatch(f.ui.text(), /用户名 user/)
-  assert.equal(f.rbac.accessStore.hasPermission(permissions.meView), false)
+  assert.equal(f.rbac.accessStore.hasPermission(permissions.roleView), false)
   f.ui.app.unmount()
 })
 
@@ -248,7 +249,7 @@ test('matrix successful write followed by failed /me revokes authorization', asy
   f.failMe()
   await f.ui.click('保存 operator')
   assert.match(f.ui.text(), /权限不足/)
-  assert.equal(f.rbac.accessStore.hasPermission(permissions.roleManage), false)
+  assert.equal(f.rbac.accessStore.hasPermission(permissions.rolePermissionUpdate), false)
   assert.equal(f.ui.all('input').length, 0)
   f.ui.app.unmount()
 })
@@ -270,4 +271,60 @@ test('transposed matrix saves the selected role column without changing another 
   assert.deepEqual(saved, { code: 'viewer', codes: ['read', 'deploy'] })
   assert.equal(f.ui.all('input')[0].props.checked, true)
   f.ui.app.unmount()
+})
+
+
+test('matrix requires every read permission before any API request', async () => {
+  const required = [permissions.roleView, permissions.rolePermissionView, permissions.permissionView]
+  for (const missing of required) {
+    let calls = 0
+    const api = fakeApi()
+    for (const method of ['listRoles', 'listPermissions', 'getRolePermissions']) api[method] = async () => { calls++; return [] }
+    const f = await fixture('RolePermissionMatrixView', { api, codes: required.filter(code => code !== missing) })
+    await flush()
+    assert.equal(calls, 0)
+    assert.match(f.ui.text(), /权限不足/)
+    f.ui.app.unmount()
+  }
+})
+
+test('matrix method capability works without legacy hint and disappears when method is absent', async () => {
+  for (const enabled of [true, false]) {
+    const api = fakeApi()
+    delete api.supportsUpdates
+    if (!enabled) delete api.updateRolePermissions
+    const f = await fixture('RolePermissionMatrixView', { api })
+    await flush()
+    assert.equal(f.ui.all('input').length > 0, enabled)
+    f.ui.app.unmount()
+  }
+})
+
+test('ordinary authenticated users can see MyAccess without admin permissions; logout hides it', async () => {
+  const f = await fixture('MyAccessView', { codes: [] })
+  assert.match(f.ui.text(), /用户名 user/)
+  await f.rbac.logout(); await flush()
+  assert.doesNotMatch(f.ui.text(), /用户名 user/)
+  f.ui.app.unmount()
+})
+
+test('me route and menu require authentication, independently of admin grants', async () => {
+  const { lib } = await harness()
+  const rbac = lib.createRbacPlugin({ mode: 'local', loadAccess: async () => ({ roles: [], permissions: [] }) })
+  const router = createRouter({ history: createMemoryHistory(), routes: [
+    ...lib.createRbacAdminRoutes({ permissions: {} }).map(route => ({ ...route, component: { render: () => null } })),
+    { path: '/403', component: { render: () => null } },
+  ] })
+  lib.installRbacGuard(router, { accessStore: rbac.accessStore })
+  await router.push('/rbac-admin/me')
+  assert.equal(router.currentRoute.value.path, '/403')
+  rbac.auth.markLocalAuthenticated(); await rbac.accessStore.loadAccess()
+  await router.push('/rbac-admin/me')
+  assert.equal(router.currentRoute.value.path, '/rbac-admin/me')
+  const menus = lib.createRbacAdminMenu({ permissions: {} })
+  assert.equal(lib.filterMenus(menus, () => false).length, 0)
+  assert.deepEqual(Array.from(lib.filterMenus(menus, () => false, true), menu => menu.path), ['/rbac-admin/me'])
+  await rbac.logout()
+  await router.push('/403'); await router.push('/rbac-admin/me')
+  assert.equal(router.currentRoute.value.path, '/403')
 })

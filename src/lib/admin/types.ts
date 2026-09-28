@@ -1,13 +1,14 @@
 import type { RbacAdminApi } from './api/types'
 export interface RbacAdminPermissions {
-  roleView: string
-  roleManage?: string
+  roleView?: string
   roleCreate?: string
   roleUpdate?: string
   roleDelete?: string
   userRoleView?: string
   userRoleUpdate?: string
-  meView: string
+  rolePermissionView?: string
+  rolePermissionUpdate?: string
+  permissionView?: string
 }
 export interface RbacAdminOptions {
   api: RbacAdminApi

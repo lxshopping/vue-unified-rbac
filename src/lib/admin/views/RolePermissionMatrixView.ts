@@ -10,7 +10,7 @@ export default defineComponent({
       const [roles, permissions] = await Promise.all([api.listRoles(), api.listPermissions()])
       const grants = await Promise.all(roles.map(role => api.getRolePermissions(role.code)))
       return { roles, permissions, grants }
-    })
+    }, ['roleView', 'permissionView', 'rolePermissionView'])
     const draft = ref<string[][]>([])
     const saving = ref(false)
     const feedback = ref('')
@@ -20,7 +20,7 @@ export default defineComponent({
     watch(state.data, value => { draft.value = value?.grants.map(codes => [...codes]) ?? [] }, { flush: 'sync' })
     watch(() => state.rbac.auth.source, () => { feedback.value = ''; saveError.value = '' })
     const editable = computed(() => state.allowed.value && state.admin.editable === true &&
-      api.supportsUpdates === true && state.rbac.accessStore.hasPermission(state.admin.permissions.roleManage))
+      api.supportsUpdates !== false && typeof api.updateRolePermissions === 'function' && state.rbac.accessStore.hasPermission(state.admin.permissions.rolePermissionUpdate))
     async function save(index: number) {
       const data = state.data.value
       if (!data || !editable.value || saving.value || state.loading.value) return
@@ -31,7 +31,7 @@ export default defineComponent({
       const current = () => alive && revision === state.rbac.auth.getRevision()
       try {
         // Preserve codes not yet included in the backend catalogue; never silently delete them.
-        await api.updateRolePermissions(data.roles[index].code, [...draft.value[index]])
+        await api.updateRolePermissions!(data.roles[index].code, [...draft.value[index]])
         if (!current()) return
         await state.rbac.accessStore.reloadAccess()
         if (!current()) return
