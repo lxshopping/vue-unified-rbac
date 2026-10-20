@@ -1,4 +1,4 @@
-import { computed, defineComponent, h, ref, shallowRef } from 'vue'
+import { computed, defineComponent, h, ref, shallowRef, watch } from 'vue'
 import { useRbacAdmin } from '../context'
 import type { LocalRbacUser, RbacRole } from '../api/types'
 import { AdminDialog, button, frame, message, roleSourceLabel, status, useAdminEditor, useAdminResource } from './shared'
@@ -22,6 +22,9 @@ export default defineComponent({
     const roles = shallowRef<RbacRole[]>([])
     const draft = ref<string[]>([])
     const ready = ref(false)
+    const original = ref<string[]>([])
+    const confirming = ref(false)
+    watch(() => [editor.opened.value, draft.value], () => { confirming.value = false }, { flush: 'sync' })
     async function load() {
       const user = selected.value
       if (!user || !isLocal(user)) return
@@ -33,7 +36,7 @@ export default defineComponent({
       await editor.run(async current => {
         const [candidates, assigned] = await Promise.all([api.listRoles(), api.getLocalUserRoles!(user.id)])
         if (!current()) return
-        roles.value = candidates; draft.value = [...assigned]; ready.value = true
+        roles.value = candidates; original.value = [...assigned]; draft.value = [...assigned]; ready.value = true
       })
     }
     async function open(user: LocalRbacUser) {
@@ -42,9 +45,11 @@ export default defineComponent({
       roles.value = []; draft.value = []; ready.value = false; editor.opened.value = true
       await load()
     }
-    async function save() {
+    async function save(confirmed = false) {
       const user = selected.value
       if (!canManage.value || !ready.value || !user || !isLocal(user)) return
+      if (original.value.some(code => !draft.value.includes(code)) && !confirmed) { confirming.value = true; return }
+      confirming.value = false
       await editor.run(async (current, sameSession) => {
         await api.updateLocalUserRoles!(user.id, [...draft.value])
         if (!current()) return
@@ -88,8 +93,13 @@ export default defineComponent({
             ]))) : status('暂无可选角色', 'empty'),
             draft.value.some(code => !roles.value.some(role => role.code === code)) ? h('p', { class: 'rbac-admin-description' }, '目录外的已有角色会保留：' + draft.value.filter(code => !roles.value.some(role => role.code === code)).join(', ')) : null,
           ] : !editor.busy.value ? button('重试', load) : null,
+          confirming.value ? [
+            status('此操作撤销用户角色，可能同时撤销关键管理能力。若操作的是你自己的账号，你可能失去管理权限。', 'error'),
+            h('p', '将撤销：' + original.value.filter(code => !draft.value.includes(code)).join(', ') + '。最终由后端验证。'),
+            button('取消撤销', () => { confirming.value = false }), button('确认撤销', () => save(true), editor.busy.value, 'danger'),
+          ] : null,
           h('div', { class: 'rbac-admin-toolbar' }, [button('取消', editor.close, editor.busy.value),
-            ready.value ? button('保存', save, editor.busy.value, 'primary') : null]),
+            ready.value && !confirming.value ? button('保存', () => save(), editor.busy.value, 'primary') : null]),
         ],
       }) : null,
     ], editor.busy.value, '仅管理 Django 本地用户的角色。SSO 用户角色由 Keycloak 管理。')

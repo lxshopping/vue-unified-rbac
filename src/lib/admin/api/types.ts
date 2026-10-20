@@ -22,6 +22,8 @@ export interface LocalRbacUser {
 export interface UpdateUserRolesPayload { role_codes: string[] }
 export interface RbacPermission { id?: string | number; code: string; name?: string; description?: string }
 export interface RbacAdminApi {
+  listAuditLogs?(query?: AuditLogQuery): Promise<AuditLogPage>
+  getAuditLog?(id: string | number): Promise<AuditLog>
   /** Deprecated matrix-only capability hint. False disables matrix writes; never gates other actions. */
   readonly supportsUpdates?: boolean
   getRole?(id: string | number): Promise<RbacRole>
@@ -39,6 +41,8 @@ export interface RbacAdminApi {
   getMyAccess(): Promise<AccessResult>
 }
 export interface RbacAdminEndpoints {
+  auditLogs?: string | null
+  auditLogDetail?: ((id: string | number) => string) | null
   roles: string
   permissions: string
   rolePermissions: (role: string) => string
@@ -58,6 +62,8 @@ export interface RbacAdminApiOptions {
   updateMethod?: 'put' | 'patch' | 'post'
   /** Adapt envelopes/pagination here. Return the complete catalogue for a matrix. */
   adapters?: {
+    auditLogs?: (data: unknown) => AuditLogPage
+    auditLog?: (data: unknown) => AuditLog
     roles?: (data: unknown) => RbacRole[]
     permissions?: (data: unknown) => RbacPermission[]
     rolePermissions?: (data: unknown) => string[]
@@ -68,4 +74,37 @@ export interface RbacAdminApiOptions {
     localUserRoles?: (data: unknown) => string[]
     userRolesBody?: (roles: string[]) => unknown
   }
+}
+
+export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue }
+export interface AuditLog {
+  id: number
+  actor_type: string
+  actor_id: string
+  actor_name: string
+  action: string
+  target_type: string
+  target_id: string
+  target_name: string
+  before_data: { [key: string]: JsonValue }
+  after_data: { [key: string]: JsonValue }
+  created_at: string
+  request_id: string
+  result: 'success' | 'denied' | 'failed'
+  reason_code: string
+}
+export interface AuditLogPage { count: number; next: string | null; previous: string | null; results: AuditLog[] }
+export interface AuditLogQuery {
+  page?: number
+  page_size?: number
+  actor_type?: string
+  actor_id?: string
+  actor_name?: string
+  action?: string
+  target_type?: string
+  target_id?: string
+  result?: 'success' | 'denied' | 'failed'
+  request_id?: string
+  created_after?: string
+  created_before?: string
 }

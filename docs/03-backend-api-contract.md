@@ -1,6 +1,6 @@
 # 后端 API 依赖
 
-当前 Admin 0.3.3 contract 以 [Admin 接入](11-admin-ui.md) 为准：默认完整 DRF endpoints、Permission 只读、集合写入使用 permission_codes/role_codes。下文保留早期阶段记录。
+当前 Admin 0.3.4 contract 以 [Admin 接入](11-admin-ui.md) 为准：默认完整 DRF endpoints、Permission 只读、集合写入使用 permission_codes/role_codes。0.3.4 新增只读审计及 HTTP 400 管理员保护，正式管理权限仍使用 rbac.*。后端依据为 drf-unified-rbac/docs/rbac-034-contract.md 与 rbac-034-implementation-report.md。下文保留早期阶段记录。
 
 > 历史 Demo / Consumer Example 文档：其中的业务权限码、接口和页面属于宿主示例，不是 Library 内置功能或本次开发范围。当前公共 API 与目录以 [README](../README.md) 和 [Library 改造记录](07-library-refactor.md) 为准。
 

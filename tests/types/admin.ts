@@ -21,3 +21,14 @@ api.updateRole?.(1, { name: 'Updated', active: true })
 api.updateRole?.(1, { code: 'renamed' })
 const me: AccessResult = { roles: [], permissions: [], role_source: 'keycloak' }
 void me
+
+// 0.3.4 additions stay optional for existing custom clients and route callers.
+import type { AuditLog, AuditLogPage, AuditLogQuery } from '../../src/lib'
+const auditQuery: AuditLogQuery = { actor_id: 'uuid', page_size: 50, result: 'denied' }
+const auditPage: Promise<AuditLogPage> | undefined = api.listAuditLogs?.(auditQuery)
+const auditDetail: Promise<AuditLog> | undefined = api.getAuditLog?.(7)
+createRbacAdminRoutes({ permissions: { auditView: 'rbac.audit.view' }, includeAudit: true })
+void auditPage; void auditDetail
+// @ts-expect-error Actor identifiers are strings.
+const invalidAuditQuery: AuditLogQuery = { actor_id: 1 }
+void invalidAuditQuery

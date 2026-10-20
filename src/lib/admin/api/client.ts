@@ -1,3 +1,4 @@
+import type { AuditLog, AuditLogPage, AuditLogQuery } from './types'
 import type { AxiosInstance } from 'axios'
 import { normalizeAccess } from '../../access/types'
 import type { RbacAdminApi, RbacAdminApiOptions, RbacAdminEndpoints, RbacPermission, RbacRole, LocalRbacUser, CreateRolePayload, UpdateRolePayload } from './types'
@@ -47,6 +48,20 @@ function user(value: unknown): LocalRbacUser {
   return { id: v.id, username: v.username, active: active(v.active ?? v.is_active),
     roles: codes(v.roles), authSource, roleSource }
 }
+function auditLog(data: unknown): AuditLog {
+  const v = object(data)
+  const fields = ['actor_type', 'actor_id', 'actor_name', 'action', 'target_type', 'target_id', 'target_name', 'created_at', 'request_id', 'reason_code']
+  if (!Number.isSafeInteger(v.id) || (v.id as number) < 1 || !fields.every(key => typeof v[key] === 'string') ||
+    !['success', 'denied', 'failed'].includes(v.result as string)) throw new Error('Invalid audit record')
+  object(v.before_data); object(v.after_data)
+  return v as unknown as AuditLog
+}
+function auditPage(data: unknown): AuditLogPage {
+  const v = object(data)
+  if (!Number.isSafeInteger(v.count) || (v.count as number) < 0 || !Array.isArray(v.results) ||
+    ![v.next, v.previous].every(link => link === null || typeof link === 'string')) throw new Error('Invalid audit pagination')
+  return { count: v.count as number, next: v.next as string | null, previous: v.previous as string | null, results: v.results.map(auditLog) }
+}
 export function createRbacAdminApi(instance: AxiosInstance, options: RbacAdminApiOptions = {}): RbacAdminApi {
   const a = options.adapters ?? {}
   const base = (options.basePath ?? '/api/rbac/admin').replace(/\/+$/, '')
@@ -59,6 +74,7 @@ export function createRbacAdminApi(instance: AxiosInstance, options: RbacAdminAp
   }
   const userRoles = (id: string | number) => base + '/users/' + encodeURIComponent(String(id)) + '/roles/'
   const defaults: RbacAdminEndpoints = {
+    auditLogs: base + '/audit-logs/', auditLogDetail: id => base + '/audit-logs/' + encodeURIComponent(String(id)) + '/',
     roles: base + '/roles/', permissions: base + '/permissions/', roleDetail: detail,
     permissionDetail: id => base + '/permissions/' + encodeURIComponent(String(id)) + '/',
     me: '/api/rbac/me',
@@ -100,6 +116,27 @@ export function createRbacAdminApi(instance: AxiosInstance, options: RbacAdminAp
       ...(data.active !== undefined ? { enabled: data.active } : {}) }
   }
   return {
+    ...(e.auditLogs ? { async listAuditLogs(query: AuditLogQuery = {}) {
+      const params: Record<string, string | number> = {}
+      for (const key of ['actor_type', 'actor_id', 'actor_name', 'action', 'target_type', 'target_id', 'result', 'request_id', 'created_after', 'created_before'] as const) {
+        const value = query[key]
+        if (value !== undefined && value !== '') {
+          if (typeof value !== 'string') throw new Error('Invalid audit filter')
+          params[key] = value
+        }
+      }
+      for (const key of ['page', 'page_size'] as const) if (query[key] !== undefined) {
+        const value = query[key]!
+        if (!Number.isSafeInteger(value) || value < 1 || (key === 'page_size' && value > 200)) throw new Error('Invalid audit pagination query')
+        params[key] = value
+      }
+      const data: unknown = (await instance.get(endpoint(e.auditLogs), { params })).data
+      return auditPage(a.auditLogs ? a.auditLogs(data) : data)
+    } } : {}),
+    ...(e.auditLogDetail ? { async getAuditLog(id: string | number) {
+      const data: unknown = (await instance.get(endpoint(e.auditLogDetail!(id)))).data
+      return auditLog(a.auditLog ? a.auditLog(data) : data)
+    } } : {}),
     supportsUpdates: typeof e.updateRolePermissions === 'function',
     async listRoles() {
       const roles = catalogue(await list(e.roles, a.roles)).map(role)

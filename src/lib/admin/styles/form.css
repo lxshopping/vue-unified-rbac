@@ -5,3 +5,5 @@
 .rbac-admin-input:disabled { background: var(--rbac-admin-bg-muted); color: var(--rbac-admin-text-secondary); }
 .rbac-admin-input:focus-visible { outline: 2px solid var(--rbac-admin-primary); outline-offset: 2px; }
 .rbac-admin-role-options { max-height: 45vh; overflow: auto; padding: 4px; }
+.rbac-admin-audit-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--rbac-admin-spacing-md); margin-bottom: var(--rbac-admin-spacing-md); align-items: end; }
+.rbac-admin-audit-filters .rbac-admin-field { margin: 0; }

@@ -1,3 +1,5 @@
+> **0.3.4**：新增可选审计页面（`includeAudit: true` / `rbac.audit.view`）、危险操作确认和后端保护错误提示。旧公开调用保留。详见 [接入与升级](docs/11-admin-ui.md#034-审计与危险操作保护) 和 [修改总结](docs/13-v034-report.md)。
+
 > **V3 / 0.3.0**：新增默认 Django Session Local Provider 和可选 Host Local Adapter，保留 V2 SSO、Hybrid 和 Admin。四种接入场景、CSRF 配置、可运行 Demo 及兼容说明见 [V2 → V3 Migration](docs/09-v3-migration.md)。
 >
 > Authentication source may differ. Authorization source does not.
@@ -34,7 +36,7 @@ npm install
 npm run build
 npm pack
 # 在另一个 Vue 项目中：
-npm install /path/to/scotec-vue-unified-rbac-0.2.0.tgz
+npm install /path/to/scotec-vue-unified-rbac-0.3.4.tgz
 ~~~
 
 宿主依赖：Vue ^3.5.0、Pinia ^3.0.0、Vue Router ^4.5.0、Axios ^1.20.0。使用 ESM 与 TypeScript moduleResolution: "Bundler"。本仓库开发/构建要求 Node.js >=22.18.0。

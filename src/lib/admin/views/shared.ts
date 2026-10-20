@@ -5,7 +5,17 @@ import type { RbacAdminPermissions } from '../types'
 import { useRbacAdmin } from '../context'
 
 export function errorMessage(cause: unknown, fallback = '操作失败，请重试。'): string {
-  const data = (cause as { response?: { data?: unknown } })?.response?.data
+  const response = (cause as { response?: { data?: unknown; status?: number } })?.response
+  const data = response?.data
+  const record = data && typeof data === 'object' && !Array.isArray(data) ? data as Record<string, unknown> : undefined
+  if (typeof record?.detail === 'string') {
+    const code = record.code
+    const hint = code === 'rbac_last_admin' ? '最后管理员保护：' : code === 'rbac_last_critical_permission' ? '关键管理权限保护：' : ''
+    const permissions = Array.isArray(record.permissions) ? record.permissions.filter((item): item is string => typeof item === 'string') : []
+    return hint + record.detail + (permissions.length ? '（受影响权限：' + permissions.join(', ') + '）' : '')
+  }
+  const statusFallback: Record<number, string> = { 400: '输入或业务校验失败。', 401: '认证已失效，请重新登录。', 403: '权限不足，操作被拒绝。', 404: '对象不存在，请重新加载。', 405: '不支持此操作。' }
+  fallback = statusFallback[response?.status ?? 0] ?? ((response?.status ?? 0) >= 500 ? '服务器错误，请稍后重试。' : fallback)
   function flatten(value: unknown, prefix = ''): string[] {
     if (typeof value === 'string') return [prefix + value]
     if (Array.isArray(value)) return value.flatMap(item => flatten(item, prefix))

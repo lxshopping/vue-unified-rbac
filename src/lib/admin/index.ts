@@ -1,4 +1,6 @@
 import { defineAsyncComponent } from 'vue'
+export type { AuditLog, AuditLogPage, AuditLogQuery, JsonValue } from './api/types'
+export const AuditLogView = /* @__PURE__ */ defineAsyncComponent(() => import('./views/AuditLogView'))
 export { createRbacAdminApi } from './api/client'
 export type { RbacRole, RbacPermission, RbacAdminApi, RbacAdminEndpoints, RbacAdminApiOptions } from './api/types'
 export type { CreateRolePayload, UpdateRolePayload, LocalRbacUser, UpdateUserRolesPayload } from './api/types'

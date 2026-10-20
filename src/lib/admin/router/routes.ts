@@ -9,7 +9,7 @@ export function createRbacAdminRoutes(options: RbacAdminRouteOptions): RouteReco
   const prefix = options.namePrefix ?? 'rbac-admin'
   const key = options.permissionMetaKey ?? 'permission'
   if (!key.trim() || ['rbacAdminTitle', 'requiresAuth'].includes(key)) throw new Error('permissionMetaKey must be non-empty and not a reserved metadata key')
-  return [
+  const routes: RouteRecordRaw[] = [
     { path: base + '/roles', name: prefix + '-roles', meta: { [key]: permissions.roleView, rbacAdminTitle: '角色列表' },
       component: () => import('../views/RoleListView') },
     { path: base + '/role-permissions', name: prefix + '-role-permissions', meta: { [key]: permissions.rolePermissionView, rbacAdminTitle: '角色权限矩阵' },
@@ -19,6 +19,10 @@ export function createRbacAdminRoutes(options: RbacAdminRouteOptions): RouteReco
     { path: base + '/me', name: prefix + '-me', meta: { requiresAuth: true, rbacAdminTitle: '当前用户权限' },
       component: () => import('../views/MyAccessView') },
   ]
+  if (options.includeAudit) routes.push({ path: base + '/audit-logs', name: prefix + '-audit-logs',
+    meta: { [key]: permissions.auditView, rbacAdminTitle: '审计日志' },
+    component: () => import('../views/AuditLogView') })
+  return routes
 }
 export function createRbacAdminMenu(options: RbacAdminRouteOptions) {
   return createRbacAdminRoutes(options).map(route => ({

@@ -1,5 +1,6 @@
 import type { RbacAdminApi } from './api/types'
 export interface RbacAdminPermissions {
+  auditView?: string
   roleView?: string
   roleCreate?: string
   roleUpdate?: string
@@ -17,6 +18,8 @@ export interface RbacAdminOptions {
   editable?: boolean
 }
 export interface RbacAdminRouteOptions {
+  /** Opt in to the 0.3.4 audit route and menu. Existing routes remain unchanged. */
+  includeAudit?: boolean
   permissions: RbacAdminPermissions
   basePath?: string
   namePrefix?: string

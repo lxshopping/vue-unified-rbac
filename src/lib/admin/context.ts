@@ -11,6 +11,7 @@ export function validateAdminPermissions(permissions: RbacAdminPermissions): voi
 export function resolveAdminPermissions(permissions: RbacAdminPermissions): Required<RbacAdminPermissions> {
   validateAdminPermissions(permissions)
   return {
+    auditView: permissions.auditView ?? 'rbac.audit.view',
     roleView: permissions.roleView ?? 'rbac.role.view',
     rolePermissionView: permissions.rolePermissionView ?? 'rbac.role_permission.view',
     rolePermissionUpdate: permissions.rolePermissionUpdate ?? 'rbac.role_permission.update',

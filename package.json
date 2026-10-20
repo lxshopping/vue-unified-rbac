@@ -1,6 +1,6 @@
 {
   "name": "@scotec/vue-unified-rbac",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "type": "module",
   "engines": {
     "node": ">=22.18.0"

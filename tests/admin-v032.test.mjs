@@ -236,6 +236,7 @@ test('Local role choices and latest assignments come from API; PUT contains comp
   assert.deepEqual(f.ui.all('input').map(v => v.props['aria-label']), ['operator', 'rbac_admin'])
   check(f.ui, 'operator', false); check(f.ui, 'rbac_admin', true)
   await f.ui.click('保存')
+  await f.ui.click('确认撤销')
   assert.deepEqual(f.api.calls.find(v => v[0] === 'setRoles'), ['setRoles', user.id, ['rbac_admin']])
   assert.equal(f.ui.all('dialog').length, 0)
   assert.match(f.ui.text(), /角色保存成功/)
@@ -249,7 +250,7 @@ test('Local user role replacement permits empty sets and preserves unknown exist
     const api = fakeApi()
     api.getLocalUserRoles = async () => existing
     const f = await fixture('LocalUserRolesView', { api })
-    await f.ui.click('管理角色'); check(f.ui, 'operator', false); await f.ui.click('保存')
+    await f.ui.click('管理角色'); check(f.ui, 'operator', false); await f.ui.click('保存'); await f.ui.click('确认撤销')
     assert.deepEqual(api.calls.find(v => v[0] === 'setRoles')[2], existing.includes('legacy') ? ['legacy'] : [])
     f.ui.app.unmount()
   }
@@ -259,7 +260,7 @@ test('Local UserRole last-admin failure keeps dialog and draft with explicit bac
   const api = fakeApi()
   api.updateLocalUserRoles = async () => { throw backendError({ detail: 'Cannot remove the last active rbac_admin.' }) }
   const f = await fixture('LocalUserRolesView', { api })
-  await f.ui.click('管理角色'); check(f.ui, 'operator', false); await f.ui.click('保存')
+  await f.ui.click('管理角色'); check(f.ui, 'operator', false); await f.ui.click('保存'); await f.ui.click('确认撤销')
   assert.equal(f.ui.all('dialog').length, 1)
   assert.match(f.ui.text(), /Cannot remove the last active rbac_admin/)
   assert.equal(f.ui.all('input')[0].props.checked, false)

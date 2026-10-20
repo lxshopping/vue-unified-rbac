@@ -175,7 +175,8 @@ test('matrix saves changes, preserves unlisted grants, disables edits and reload
   const f = await fixture('RolePermissionMatrixView', { api })
   await flush()
   f.ui.all('input')[0].props.onChange({ target: { checked: false } })
-  const saving = f.ui.click('保存 operator')
+  await f.ui.click('保存 operator')
+  const saving = f.ui.click('确认撤销')
   await flush()
   assert.equal(f.ui.all('input')[0].props.disabled, true)
   assert.match(f.ui.text(), /正在保存/)
@@ -195,6 +196,7 @@ test('matrix failure restores server values and reports error; reload error does
   await flush()
   f.ui.all('input')[0].props.onChange({ target: { checked: false } })
   await f.ui.click('保存 operator')
+  await f.ui.click('确认撤销')
   assert.match(f.ui.text(), /失败/)
   assert.equal(f.ui.all('input')[0].props.checked, true)
   api.listRoles = async () => { throw Error('offline') }

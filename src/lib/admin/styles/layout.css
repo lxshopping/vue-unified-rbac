@@ -24,3 +24,4 @@
   .rbac-admin-title { font-size: 20px; }
   .rbac-admin-card { padding: var(--rbac-admin-spacing-sm); }
 }
+.rbac-admin-json { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 24rem; overflow: auto; font-size: .875rem; }
